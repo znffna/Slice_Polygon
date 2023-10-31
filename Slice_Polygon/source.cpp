@@ -439,7 +439,7 @@ GLvoid Timer(int value) { //--- 콜백 함수: 타이머 콜백 함수
 		//해당 도형을 object 에서 삭제 시킨다.
 		object.erase(object.begin() + *it);
 		if (debug) {
-			std::cout << "삭제된 후 object에 현재 도형 갯수 :" << object.size() << '\n';
+			std::cout << *it << "삭제된 후 object에 현재 도형 갯수 :" << object.size() << '\n';
 		}
 	}
 
@@ -500,7 +500,7 @@ void Change_switch(bool& variable) {
 
 bool move(Polygons& o) {
 	o.move();
-	if (o.translation.y <= -o.scale.y - 1) {
+	if (o.time >= 1.0f) {
 		return true;
 	}
 
