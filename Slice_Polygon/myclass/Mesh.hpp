@@ -27,6 +27,7 @@
 class Mesh {
 private:
 	std::string name;
+
 	void spiral();
 	void axis();
 	void tetrahedron();
@@ -39,6 +40,7 @@ public:
 	GLuint vbo[2];
 	GLuint ebo;
 
+	std::vector<glm::vec3> vertex;	//회전 적용 안하는 기본 정점
 	GLuint vertexnum;	//정점 개수
 	GLuint indexnum;	//인덱스 크기
 	GLuint polygonnum;	//폴리곤 개수(삼각형 개수)

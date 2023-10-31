@@ -73,6 +73,7 @@ void Mesh::clear() {
 		glDeleteBuffers(1, &ebo);
 		glDeleteBuffers(2, vbo);
 		glDeleteVertexArrays(1, &vao);
+		vertex.clear();
 	}
 	name = "None";
 	vao = 0;
@@ -618,6 +619,7 @@ void Mesh::polygon(const int& polygon) {
 		vertex.push_back(sin(glm::radians(degree * count)) * LEN);	//y
 		vertex.push_back(0.0f);	//z
 
+		this->vertex.push_back({ cos(glm::radians(degree * count)) * LEN, sin(glm::radians(degree * count)) * LEN, 0.0f });
 
 		color.push_back(rainbow[count % 8].x);
 		color.push_back(rainbow[count % 8].y);
