@@ -27,7 +27,19 @@ void Object::reset() {
 	rotate = { 0.0f ,0.0f, 0.0f };
 	translation = { 0.0f ,0.0f, 0.0f };
 	after_rotate_origin= { 0.0f ,0.0f, 0.0f };
-	mesh.setMesh(MESH_CUBE);
+	mesh.setMesh(MESH_TRIANGLE);
+}
+
+void Object::reset(const int& polygon) {
+	radius = 1.0f;
+	after_translation = { 0.0f ,0.0f, 0.0f };
+	after_rotate = { 0.0f ,0.0f, 0.0f };
+	after_scale = { 1.0f ,1.0f, 1.0f };
+	scale = { 0.3f ,0.3f, 0.3f };
+	rotate = { 0.0f ,0.0f, 0.0f };
+	translation = { 0.0f ,0.0f, 0.0f };
+	after_rotate_origin = { 0.0f ,0.0f, 0.0f };
+	mesh.setMesh(polygon);
 }
 
 void Object::transform_reset() {

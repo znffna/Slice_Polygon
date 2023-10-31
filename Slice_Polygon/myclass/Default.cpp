@@ -1,5 +1,9 @@
 #include "Default.hpp"
 
+void show_vec3(const glm::vec3& vector) {
+	std::cout << "{" << vector.x << ", " << vector.y << ", " << vector.z << "}" << '\n';
+}
+
 float random_number(const float& min, const float& max) {
 	std::random_device rd;
 	std::mt19937 gen(rd());
@@ -19,4 +23,14 @@ int random_number(const int& min, const int& max) {
 void degree_range_normalization(float& degree) {
 	while (degree < 0.0f) degree += 360.0f;
 	while (360.0f <= degree) degree -= 360.0f;
+}
+
+glm::vec3 CalculateBezierPoint(float t, const glm::vec3& p0, const glm::vec3& p1, const glm::vec3& p2) {
+	float u = 1 - t;
+	float tt = t * t;
+	float uu = u * u;
+	glm::vec3 p = uu * p0; // (1 - t)^2 * P0
+	p += 2 * u * t * p1; // 2 * (1 - t) * t * P1
+	p += tt * p2; // t^2 * P2
+	return p;
 }

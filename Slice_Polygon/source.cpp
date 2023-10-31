@@ -10,17 +10,83 @@
 const char title[] = "Let's Slice Polygon";
 const std::string User_guide[] = {
 "----키보드 명령----",
-"도형의 모드: LINE/FILL",
-"경로 출력하기: on/off",
+"도형의 모드 LINE/FILL : m",
+"경로 출력하기 on/off : r",
 "날라오는 속도 변경하기: +/- (빨라지기/느려지기)",
 "프로그램 종료: q",
 //"Paste_here",
 "-------------------"
 };
 
+bool debug{ true };
+
 //--------------------------------------------------------
 //--- 클래스 정의
 //--------------------------------------------------------
+
+class Polygons : public Object {
+public:
+
+	float time;		//시간 매개변수
+
+
+	//2차 베지어 곡선 (이동 루트)
+	glm::vec3 start_point;
+	glm::vec3 control_point;
+	glm::vec3 end_point;
+
+	Polygons();
+	~Polygons();
+
+	void move();
+	void reset(const float& speed);
+};
+
+Polygons::Polygons() : Object() {	
+	scale = glm::vec3 { 0.1f };
+	time = 0.0f;
+}
+
+Polygons::~Polygons() {
+
+}
+
+void Polygons::reset(const float& polygon) {
+	Object::reset(polygon);
+	//Polygons::Polygons();
+	time = 0.0f;
+
+	scale = glm::vec3{ 0.2f };
+
+	time = 0.0f;
+	start_point = { (random_number(0, 1) == 0 ? -1 : 1) * (1 + scale.x) , random_number(-0.7f, 0.5f), 0.0f };
+
+	end_point = { start_point.x + (start_point.x < 0 ?  random_number(1.5f, 2.0f) : random_number(-2.0f, -1.5f)), -1.0f - scale.y, 0.0f };
+	float cp = random_number(0.2f, 0.8f);
+	control_point = { (1.0f - cp) * start_point.x + cp * end_point.x, 1.7f - start_point.y, 0.0f};
+
+	translation = start_point;
+
+	if (debug) {
+		std::cout << "start_point : "; show_vec3(start_point);
+		std::cout << "control_point : "; show_vec3(control_point);
+		std::cout << "end_point : "; show_vec3(end_point);
+	}
+}
+
+float speed{ 0.016f }; 
+void Polygons::move() {
+	//현재 t를 증가시킴.
+	time += speed;
+
+	//t에 맞는 베지어 곡선 위치를 대입함.
+	translation = CalculateBezierPoint(time, start_point, control_point, end_point);
+
+	//이동하면서 자전하는 값을 키움.
+	float r = start_point.x < 0 ? -5.0f : 5.0f;
+	rotate.z += r;
+	degree_range_normalization(rotate.z);
+}
 
 
 //--------------------------------------------------------
@@ -60,6 +126,9 @@ Shader shader;
 //카메라 클래스 생성
 Camera camera;
 
+//오브젝트 클래스 생성
+std::vector<Polygons> object;
+
 //--------------------------------------------------------
 //--- 실습용 함수 선언
 //--------------------------------------------------------
@@ -67,9 +136,13 @@ GLvoid setup();				//--- main에서 최초로 생성할때 부르는 초기화 �
 void change_background();	//--- 배경색을 변경
 void DebugPrintVBOContents(GLuint vbo, int numVertices, int vertexSizeInBytes);	//--- GPU에 있는 버퍼에서 현재 바인드된 vao에 바인드된 vbo, ebo를 가져와 콘솔에 출력함.
 void Draw_shape(const Object& obj);	//--- object가 가진 변환행렬과 mesh의 3D 객체의 내용을 출력하는 함수.
-void Draw_Quadric(Object& obj);
 void Timer_option(const int&, const bool&);
 void Change_switch(bool&);
+
+bool move(Polygons& o);
+GLvoid Gen_Timer(int value);
+
+
 //--------------------------------------------------------
 //--- 실습용 전역변수 선언
 //-------------------------------------------------------
@@ -111,7 +184,8 @@ void main(int argc, char** argv) //--- 윈도우 출력하고 콜백함수 설�
 	glutMouseWheelFunc(handleMouseWheel);
 	glutMotionFunc(Motion);
 
-	glutTimerFunc(20, Timer, 0);
+	glutTimerFunc(16, Timer, 0);
+	glutTimerFunc(1000, Gen_Timer, 0);
 
 	//--- 메인 루프 진행
 	glutMainLoop();
@@ -124,18 +198,27 @@ GLvoid setup() {
 	depthcheck = true;		//은면제거 유무
 	drawstyle = true;	//false : 와이어(line) 객체/ true : 솔리드(triangle) 객체
 
-	{	//중심축 초기화
-		obj_axis.reset();
-		obj_axis.changemesh(MESH_AXIS);
-		obj_axis.setScale(glm::vec3(10.0f, 10.0f, 10.0f));
+	//카메라 초기화
+	{
+		camera.setPos({ 0.0f, 0.0f, 2.0f });
+		camera.setDir({ 0.0f, 0.0f, 0.0f });
+		camera.setUp({ 0.0f, 1.0f, 0.0f });
 	}
+
+	{	//중심축 초기화
+		/*obj_axis.reset();
+		obj_axis.changemesh(MESH_AXIS);
+		obj_axis.setScale(glm::vec3(10.0f, 10.0f, 10.0f));*/
+	}
+
+
 
 	{	//바닥 초기화
 		
 	}
 	
 	{	//Object 초기화
-
+	
 	}
 }
 
@@ -198,7 +281,13 @@ GLvoid drawScene()
 
 	//--- 오브젝트 출력
 	{				
-		
+		for (Polygons& o : object) {
+			glBindVertexArray(o.getVao());
+			shader.worldTransform(o);
+			for (int i = 0; i < o.mesh.indexnum; i++) {
+				drawstyle? o.mesh.Fill_Draw(i): o.mesh.LINE_Draw(i);
+			}
+		}
 	}
 
 	//--- GL 오류시 출력하도록 하는 디버깅코드
@@ -223,57 +312,10 @@ GLvoid Reshape(int w, int h)
 
 //--- 키보드 콜백 함수
 GLvoid Keyboard(unsigned char key, int x, int y) {
-
-	/*std::random_device rd;
-	std::mt19937 gen(rd());	
-	std::uniform_int_distribution<int> uid(0, 5);*/
-
 	//std::cout << key << "가 눌림" << std::endl;	
 	switch (key) {
-	//크레인 조작
-	case 'b': case 'B':
-		key == 'b'? Timer_option(0, false): Timer_option(0, true);
-		break;
-	case 'm': case 'M':
-		key == 'm' ? Timer_option(1, false) : Timer_option(1, true);
-		break;
-	case 'f': case 'F':
-		if (timers[3]) { timers[3] = false;	}
-		key == 'f' ? Timer_option(2, false) : Timer_option(2, true);
-		break;
-	case 'e': case 'E':
-		if (timers[2]) { timers[2] = false; }
-		key == 'e' ? Timer_option(3, false) : Timer_option(3, true);
-		break;
-	case 't': case 'T':
-		key == 't' ? Timer_option(4, false) : Timer_option(4, true);
-		break;
-	//카메라 변환
-	case 'z': case 'Z':
-		key == 'z' ? Timer_option(5, false) : Timer_option(5, true);
-		break;
-	case 'x': case 'X':
-		key == 'x' ? Timer_option(6, false) : Timer_option(6, true);
-		break;
-	case 'y': case 'Y':
-		key == 'y' ? Timer_option(7, false) : Timer_option(7, true);
-		break;
-	case 'r': case 'R':
-		key == 'r' ? Timer_option(8, false) : Timer_option(8, true);
-		break;
-	case 'a': case 'A':
-		key == 'a' ? Timer_option(9, false) : Timer_option(9, true);
-		break;
-	//애니메이션 전체 옵션
-	case 's': case 'S':
-		for (bool& t : timers) { t = false; }
-		timer_stop = 0;
-		break;
-	case 'c': case 'C':
-		crane.reset();
-		for (bool& t : timers) { t = false; }
-		timer_stop = 0;
-		break;
+	
+
 	// 은면 제거
 	case 'h': case 'H':	
 		depthcheck = depthcheck == true ? false : true;
@@ -285,11 +327,6 @@ GLvoid Keyboard(unsigned char key, int x, int y) {
 	//default option
 	case 'd': case 'D':
 		drawstyle = drawstyle == false ? true : false;
-		break;
-	case '1':
-		std::cout << "- flat_floor -" << '\n';
-		flat_floor.show_state();
-
 		break;
 	case 'q': case 'Q': glutLeaveMainLoop(); break; //--- 프로그램 종료			
 	}
@@ -307,26 +344,24 @@ GLvoid specialKeyboard(int key, int x, int y) {
 
 	switch (key) {
 	case GLUT_KEY_LEFT:
-		camera.trans_Pos_x(axis.x * -0.5f);
-		camera.trans_Pos_x(axis.y * -0.5f);
-		camera.trans_Pos_x(axis.z * -0.5f);
+		for (Polygons& p : object) {
+			p.addTranslation_x(-0.2f);
+		}
 		break;
 	case GLUT_KEY_RIGHT:
-		camera.trans_Pos_x(axis.x * 0.5f);
-		camera.trans_Pos_x(axis.y * 0.5f);
-		camera.trans_Pos_x(axis.z * 0.5f);
+		for (Polygons& p : object) {
+			p.addTranslation_x(0.2f);
+		}
 		break;
 	case GLUT_KEY_UP:
-		axis = glm::cross(axis, camera.getUp());
-		camera.trans_Pos_x(axis.x * 0.5f);
-		camera.trans_Pos_x(axis.y * 0.5f);
-		camera.trans_Pos_x(axis.z * 0.5f);
+		for (Polygons& p : object) {
+			p.addTranslation_y(0.2f);
+		}
 		break;
 	case GLUT_KEY_DOWN:
-		axis = glm::cross(axis, camera.getUp());
-		camera.trans_Pos_x(axis.x * -0.5f);
-		camera.trans_Pos_x(axis.y * -0.5f);
-		camera.trans_Pos_x(axis.z * -0.5f);
+		for (Polygons& p : object) {
+			p.addTranslation_y(-0.2f);
+		}
 		break;
 	}
 	glutPostRedisplay();
@@ -363,11 +398,7 @@ GLvoid Motion(int x, int y) {
 		float dx = mx - mousex;
 		float dy = my - mousey;
 	
-		camera.Pos_rotate(glm::vec3(camera.getSensitivity(), camera.getSensitivity(), camera.getSensitivity()) * glm::vec3(dy, -dx, 0.0f));
-		//camera.show_state();
 
-		mousex = mx;
-		mousey = my;
 
 		glutPostRedisplay();
 		//버텍스 업데이트 필요
@@ -380,130 +411,54 @@ GLvoid handleMouseWheel(int wheel, int direction, int x, int y) {
 	// x, y: 마우스 커서의 현재 위치
 	//std::cout << "wheel direction = " << direction << '\n';
 	if (direction > 0) {
-		camera.addP_t_z(-0.25f);
+		//camera.addP_t_z(-0.25f);
 		//camera.Pos_scale(glm::vec3{ 0.25f });
 	}
 	else if(direction < 0){
-		camera.addP_t_z(0.25f);
+		//camera.addP_t_z(0.25f);
 		//camera.Pos_scale(glm::vec3{ -0.25f });
 	}
-	camera.show_state();
 	//camera.show_state();
 	glutPostRedisplay();
 }
 
-//타이머 변수 선언
-//int timer_stop{ 0 };	//0일때 timer 꺼짐.
-//bool timers[10]{ false };	//--- 해당 타이머 스위치
-//bool reverse[10]{ false };//--- 해당 타이머의 역방향 여부
 
 //--- 타이머 콜백 함수
 GLvoid Timer(int value) { //--- 콜백 함수: 타이머 콜백 함수
-	if (timer_stop == 0) {
-		return;
-	}
-	//----------------크레인 조작-------------------------
-	//크레인의 아래 몸체가 x축 방향으로 양/음 방향으로 이동
-	if (timers[0]) {
-		int sign = reverse[0] ? 1 : -1;
-		crane.move(sign * 0.1f);
-	}
-	//크레인의 중앙 몸체가 y축에 대하여 양/음 방향으로 회전한다
-	if (timers[1]) {
-		int sign = reverse[1] ? 1 : -1;
-		crane.upper_twist(sign * 5.0f);
-	}
-	//포신이 y축에 대하여 양/음 방향으로 회전하는데, 두 포신이 서로 반대방향으로 회전한다. 다시 누르면 멈춘다.
-	if (timers[2]) { 		
-		if (crane.get_drag_distance() < 4.0f) {
-			crane.drag_cannon(-0.05f);
-			if (crane.get_drag_distance() > crane.rcannon.translation.x) {
-				crane.set_swing_angle(0.0f);
-			}
+	int index{0};
+	std::vector<int> erase_list;
+	for (Polygons& o : object) {
+		if (move(o)) {	//만약 도형이 화면 아래밖으로 떨어질경우 true
+			erase_list.push_back(index);
+			//object.erase(object.begin() + index);
 		}
-		else {
-			int sign = reverse[2] ? 1 : -1;
-			crane.swing_cannon(sign * 0.5f);
-			if (crane.get_swing_angle() < 0.0f) {
-				crane.set_swing_angle(0.0f);
-				Change_switch(reverse[2]);
-			}
-			else if (crane.get_swing_angle() > 120.0f) {
-				crane.set_swing_angle(120.0f);
-				Change_switch(reverse[2]);
-			}
-		}		
+		index++;
 	}
-	//2개 포신이 조금씩 이동해서 한 개가 된다 / 다시 제자리로 이동해서 2개가 된다.
-	if (timers[3]) {
-		int sign = reverse[3] ? 1 : -1;
-		//만약 회전되어있다면 정면을 향할때까진 회전만 입력.
-		if (crane.get_swing_angle() > 0.0f) {
-			crane.swing_cannon(0.5f);
-			if (crane.get_swing_angle() < 0.0f) {
-				crane.set_swing_angle(0.0f);
-			}
+	// 삭제 시켜야 하는게 있을 시 도는 for loop 문
+	for (auto it = erase_list.rbegin(); it != erase_list.rend(); ++it) {
+		//해당 도형을 object 에서 삭제 시킨다.
+		object.erase(object.begin() + *it);
+		if (debug) {
+			std::cout << "삭제된 후 object에 현재 도형 갯수 :" << object.size() << '\n';
 		}
-		else {	//--- 회전이 안되어있기에 이동 진행
-			crane.drag_cannon(sign * 0.05f);
-			std::cout << "crane.get_drag_distance() : " << crane.get_drag_distance() << '\n';
-			if (crane.get_drag_distance() < 0.0f) {
-				//crane.set_drag_distance(0.0f);
-				Change_switch(reverse[3]);
-			}
-			else if (crane.get_drag_distance() > crane.rcannon.translation.x) {
-				//crane.set_drag_distance(5.0f);
-				Change_switch(reverse[3]);
-			}
-		}		
 	}
-	//t/T: 크레인의 맨 위 2개의 팔이 z축에 대하여 양/음 방향으로 서로 반대방향으로 회전한다. 다시 누르면 멈춘다.
-	if (timers[4]) {
-		int sign = reverse[4] ? 1 : -1;
-		crane.swing_arm(sign * 5.0f);
-		if (crane.get_swing_arm() < -90.0f) {
-			crane.set_swing_arm(-90.0f);
-			Change_switch(reverse[4]);
-		}
-		else if (crane.get_swing_arm() > 90.0f) {
-			crane.set_swing_arm(90.0f);
-			Change_switch(reverse[4]);
-		}		
-	}
-	//----------------카메라 변환------------------------
-	//z/Z: 카메라가 z축 양/음 방향으로 이동
-	if (timers[5]) {
-		int sign = reverse[5] ? 1 : -1;
-		camera.trans_Pos_x(sign * 0.1f);
-		camera.trans_Dir_x(sign * 0.1f);
-	}
-	//x/X: 카메라가 x축 양/음 방향으로 이동
-	if (timers[6]) {
-		int sign = reverse[6] ? 1 : -1;
-		camera.trans_Pos_z(sign * 0.1f);
-		camera.trans_Dir_z(sign * 0.1f);
-	}
-	//y/Y: 카메라 기준 y축에 대하여 회전  **************
-	if (timers[7]) {
-		int sign = reverse[7] ? 1 : -1;
-		camera.rotate_Dir_y(sign * 5.0f);
 
-	}
-	//r/R: 화면의 중심의 y축에 대하여 카메라가 회전 (중점에 대하여 공전)
-	if (timers[8]) {
-		int sign = reverse[8] ? 1 : -1;
-		camera.rotate_Pos_y(sign * 5.0f);
-	}
-	//a/A: r 명령어와 같이 화면의 중심의 축에 대하여 카메라가 회전하는 애니메이션을 진행한다/멈춘다.
-	if (timers[9]) {
-		int sign = reverse[9] ? 1 : -1;
-		camera.rotate_Up(sign * 5.0f);
-		camera.show_state();
-	}
-	
 	glutPostRedisplay();	
-	glutTimerFunc(20, Timer, value); // 타이머함수 재 설정
+	glutTimerFunc(16, Timer, value); // 타이머함수 재 설정
 }
+
+GLvoid Gen_Timer(int value) { //--- 콜백 함수: 타이머 콜백 함수
+
+	Polygons tmp;	//생성 1
+	tmp.reset(random_number(0x10, 0x16));
+	object.push_back(tmp);	// 생성 2
+
+	if (debug) {
+		std::cout << "object에 현재 도형 갯수 :" << object.size() << '\n';
+	}
+
+	glutTimerFunc(1000, Gen_Timer, value); // 타이머함수 재 설정
+}	// 삭제 1
 
 //----------------------------------------
 //실습용 함수 정의
@@ -536,27 +491,18 @@ void change_background() {
 }
 
 void Timer_option(const int& type, const bool& option) {
-	/*if (timers[type] and reverse[type] == option) {
-		timers[type] = false;
-		timer_stop--;
-	}
-	else if (timers[type]) {
-		reverse[type] = option;
-	}*/
-	if (timers[type]) {
-		timers[type] = false;
-		timer_stop--;
-	}	
-	else {
-		timers[type] = true;
-		reverse[type] = option;
-		if (timer_stop == 0) {
-			glutTimerFunc(20, Timer, 0); // 타이머함수 호출
-		}
-		timer_stop++;
-	}
+
 }
 
 void Change_switch(bool& variable) {
 	variable = variable == true ? false : true;
+}
+
+bool move(Polygons& o) {
+	o.move();
+	if (o.translation.y <= -o.scale.y - 1) {
+		return true;
+	}
+
+	return false;
 }

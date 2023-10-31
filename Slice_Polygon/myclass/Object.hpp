@@ -15,7 +15,7 @@ public:
 	//월드 변환
 	GLfloat radius;	//이동 벡터에 길이를 조절	(1.0 = 기존 좌표로 이동)
 	glm::vec3 after_translation;			//이동 백터
-	glm::vec3 after_rotate;			//회전 백터
+	glm::vec3 after_rotate;			//회전 백터(각 축에대한 degree값)
 	glm::vec3 after_scale;			//축소/확대 백터
 	
 	glm::vec3 after_rotate_origin;			//원점 중심 회전 백터
@@ -30,7 +30,7 @@ public:
 	Mesh mesh;		//해당 오브젝트가 가지는 3D 객체 넘버
 
 	//애니메이션 카운트
-	int frame[2];
+	int t;	//이동한 수치
 	int depth;
 	//---멤버 함수
 	
@@ -38,6 +38,7 @@ public:
 	//Object 설정 초기화
 	void changemesh(const int& number);
 	void reset();
+	void reset(const int& polygon);
 	void transform_reset();
 	//상태 출력
 	void show_state() const;

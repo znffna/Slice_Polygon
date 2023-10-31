@@ -1,7 +1,7 @@
 #include "Camera.hpp"
 
 Camera::Camera() {
-	lat = 0.0f;
+	lat = 0.0f;	//마우스의 상하 이동각도 기록 변수
 
 	camera_rotate = { 0.0f, 0.0f, 0.0f };
 
@@ -16,6 +16,9 @@ Camera::Camera() {
 	aspect = static_cast<float> (window_row) / static_cast<float>(window_col);
 	n = 0.05f;
 	f = 200.0f;
+
+	len_ortho = 1.0f;
+
 	//p_t = glm::vec3(0.0f, 0.0f, 0.0f);
 	sensitivity = 10.0f;
 }
@@ -33,7 +36,15 @@ void Camera::World_transform(glm::mat4& transformMatrix) const {
 	transformMatrix = glm::translate(transformMatrix, cameraPos); //--- 이동(Translation)	
 }
 
-
+void Camera::setPos(const glm::vec3& vector) {
+	cameraPos = vector; //--- 이동(Translation)	
+}
+void Camera::setDir(const glm::vec3& vector) {
+	cameraDirection = vector; //--- 이동(Translation)	
+}
+void Camera::setUp(const glm::vec3& vector) {
+	cameraUp = vector; //--- 이동(Translation)	
+}
 
 glm::vec3 Camera::getPos() const {
 	//std::cout << "CameraPos = {" << cameraPos.x << ", " << cameraPos.y << ", " << cameraPos.z << "} " << '\n';
@@ -193,7 +204,7 @@ glm::mat4 Camera::perspective_transform() const {
 }
 
 glm::mat4 Camera::ortho_transform() const {
-	float max = 100.0f;
+	float max = len_ortho;
 	glm::mat4 ortho{ 1.0f };
 	ortho = glm::ortho(-max, max, -max, max, -max, max); //--- 투영 공간 설정: [-100.0, 100.0]
 	return ortho;

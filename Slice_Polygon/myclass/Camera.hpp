@@ -5,8 +5,9 @@
 #define CAMERA_HPP
 
 class Camera {
-	float lat;
-	float radius;
+	float lat;	//마우스의 상하 이동각도 기록 변수
+
+
 	//카메라 외부 파라미터
 	glm::vec3 cameraPos; //--- 카메라 위치
 	glm::vec3 cameraDirection; //--- 카메라 바라보는 방향
@@ -16,6 +17,9 @@ class Camera {
 	GLfloat aspect;	//--- 종횡비	
 	GLfloat n;	//--- near	
 	GLfloat f;	//--- far
+
+	GLfloat len_ortho;	//직각 투영시 투영할 길이
+
 	//그외 파라미터
 	//glm::vec3 p_t;	//원근 투영시 공간 이동
 
@@ -26,6 +30,11 @@ public:
 
 	glm::vec3 camera_rotate;
 	void show_state() const;
+
+
+	void setPos(const glm::vec3&);
+	void setDir(const glm::vec3&);
+	void setUp(const glm::vec3&);
 	//카메라 파라미터 리턴
 	//외부 파라미터
 	glm::vec3 getPos() const;

@@ -11,6 +11,12 @@
 #define MESH_PYRAMID 0x04
 
 #define MESH_CIRCLE 0x10
+#define MESH_TRIANGLE 0x11
+#define MESH_SQUARE 0x12
+#define MESH_PENTAGON 0x13
+#define MESH_HEXAGON 0x14
+#define MESH_HEPTAGON 0x15
+#define MESH_OCTAGON 0x16
 
 //---- Mesh 사용법 ----
 // 1. 선언 Mesh
@@ -25,6 +31,7 @@ private:
 	void axis();
 	void tetrahedron();
 	void circle(const float&);
+	void polygon(const int&);
 	void ReadObj(const char*);
 public:
 	//---멤버 변수
