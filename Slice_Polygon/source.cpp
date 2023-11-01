@@ -18,7 +18,7 @@ const std::string User_guide[] = {
 "-------------------"
 };
 
-bool debug{ true };
+bool debug{ true };	//true 시에만 std::cout 으로 정보 출력
 
 //--------------------------------------------------------
 //--- 클래스 정의
@@ -28,7 +28,6 @@ class Polygons : public Object {
 public:
 
 	float time;		//시간 매개변수
-
 
 	//2차 베지어 곡선 (이동 루트)
 	glm::vec3 start_point;
@@ -119,7 +118,8 @@ bool perspective{ true };	//투영 방식(true : 원근 투영)
 //마우스 좌표값
 float mousex{ 0.0f };		//마우스의 x값
 float mousey{ 0.0f };		//마우스의 y값
-
+float movex{ 0.0f };		//마우스 클릭중 x값
+float movey{ 0.0f };		//마우스 클릭중 y값
 //세이더 클래스 생성
 Shader shader;
 
@@ -376,6 +376,9 @@ GLvoid Mouse(int button, int state, int x, int y) {
 	if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
 		mousex = mx;
 		mousey = my;
+		movex = mx;
+		movey = my;
+
 		leftdown = true;
 	}
 	
@@ -397,7 +400,9 @@ GLvoid Motion(int x, int y) {
 	if (leftdown) {
 		float dx = mx - mousex;
 		float dy = my - mousey;
-	
+
+		movex = mx;
+		movey = my;
 
 
 		glutPostRedisplay();
@@ -505,4 +510,22 @@ bool move(Polygons& o) {
 	}
 
 	return false;
+}
+
+void slide_polygon(Polygons& p) {
+	//현재 잘린 도형의 정점 갯수(도형 종류)
+	int vertexnum = p.mesh.vertexnum;
+
+	//현재 도형을 가르는 선
+	mousex; mousey; movex; movey;
+
+	float dx = movex - mousex;
+	float dy = movey - mousey;
+	float m = dy / dx;
+
+	float c = mousey - m * mousex;
+
+	//y = mx + c
+
+
 }
