@@ -65,6 +65,8 @@ public:
 	std::string getName() const;
 	void Object_Space_Transform(glm::mat4& ) const;
 
+	void line_initBuffers(const glm::vec3& start, const glm::vec3& end);
+
 };
 
 

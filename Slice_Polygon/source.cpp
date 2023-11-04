@@ -18,7 +18,7 @@ const std::string User_guide[] = {
 "-------------------"
 };
 
-bool debug{ true };	//true 시에만 std::cout 으로 정보 출력
+bool debug{ false };	//true 시에만 std::cout 으로 정보 출력
 
 //--------------------------------------------------------
 //--- 클래스 정의
@@ -120,6 +120,8 @@ float mousex{ 0.0f };		//마우스의 x값
 float mousey{ 0.0f };		//마우스의 y값
 float movex{ 0.0f };		//마우스 클릭중 x값
 float movey{ 0.0f };		//마우스 클릭중 y값
+Mesh mouse;
+
 //세이더 클래스 생성
 Shader shader;
 
@@ -205,10 +207,9 @@ GLvoid setup() {
 		camera.setUp({ 0.0f, 1.0f, 0.0f });
 	}
 
-	{	//중심축 초기화
-		/*obj_axis.reset();
-		obj_axis.changemesh(MESH_AXIS);
-		obj_axis.setScale(glm::vec3(10.0f, 10.0f, 10.0f));*/
+	{	//마우스 초기화
+		mouse.clear();
+
 	}
 
 
@@ -277,7 +278,13 @@ GLvoid drawScene()
 	{
 
 	}
-	
+	// 마우스 출력
+	{
+		if (leftdown) {
+			//mouse.line_initBuffers({ mousex, mousey,0.0f }, { movex, movey, 0.0f });
+
+		}
+	}
 
 	//--- 오브젝트 출력
 	{				

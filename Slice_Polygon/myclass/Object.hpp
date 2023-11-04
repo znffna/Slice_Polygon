@@ -35,6 +35,7 @@ public:
 	//---멤버 함수
 	
 	Object();	//생성자
+	~Object();
 	//Object 설정 초기화
 	void changemesh(const int& number);
 	void reset();

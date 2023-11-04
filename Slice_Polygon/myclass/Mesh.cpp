@@ -698,3 +698,71 @@ void Mesh::Object_Space_Transform(glm::mat4& transformMatrix) const {
 	transformMatrix = glm::scale(transformMatrix, origin_scale);		//--- 확대축소 변환(Scaling)
 	transformMatrix = glm::translate(transformMatrix, origin_translation); //--- 이동(Translation)	
 }
+
+
+void Mesh::line_initBuffers(const glm::vec3& start, const glm::vec3& end) {
+	if (exist()) {
+		clear();
+	}
+	name = "Line";
+	std::vector<float> vertex;
+	std::vector<float> color;
+	std::vector<unsigned int> index;
+
+	{	//값을 집어넣음.
+		//--정점
+		vertex.push_back(start.x);
+		vertex.push_back(start.y);
+		vertex.push_back(0.0f);
+
+		vertex.push_back(end.x);
+		vertex.push_back(end.y);
+		vertex.push_back(0.0f);
+		//--색상
+		color.push_back(0.0f);
+		color.push_back(0.0f);
+		color.push_back(0.0f);
+
+		color.push_back(0.0f);
+		color.push_back(0.0f);
+		color.push_back(0.0f);
+
+		index.push_back(0);
+		index.push_back(1);
+	}
+
+	{
+		glGenVertexArrays(1, &vao); //--- VAO 를 지정하고 할당하기
+		glBindVertexArray(vao); //--- VAO를 바인드하기
+
+		glGenBuffers(2, vbo); //--- 2개의 VBO를 지정하고 할당하기
+
+		//--- 1번째 VBO를 활성화하여 바인드하고, 버텍스 속성 (좌표값)을 저장
+		glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
+		//--- 변수 diamond 에서 버텍스 데이터 값을 버퍼에 복사한다.
+		//--- triShape 배열의 사이즈: 9 * float		
+		glBufferData(GL_ARRAY_BUFFER, vertex.size() * sizeof(float), vertex.data(), GL_STATIC_DRAW);
+		//--- 좌표값을 attribute 인덱스 0번에 명시한다: 버텍스 당 3* float
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+		//--- attribute 인덱스 0번을 사용가능하게 함
+		glEnableVertexAttribArray(0);
+
+		//--- 2번째 VBO를 활성화 하여 바인드 하고, 버텍스 속성 (색상)을 저장
+		glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
+		//--- 변수 colors에서 버텍스 색상을 복사한다.
+		//--- colors 배열의 사이즈: 9 *float
+		glBufferData(GL_ARRAY_BUFFER, color.size() * sizeof(float), color.data(), GL_STATIC_DRAW);
+		//--- 색상값을 attribute 인덱스 1번에 명시한다: 버텍스 당 3*float
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
+		//--- attribute 인덱스 1번을 사용 가능하게 함.
+		glEnableVertexAttribArray(1);
+
+		glGenBuffers(1, &ebo); //--- 2개의 VBO를 지정하고 할당하기
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, index.size() * sizeof(unsigned int), index.data(), GL_STATIC_DRAW);
+
+
+		glBindVertexArray(0); //--- VAO를 바인드하기
+	}
+
+}
