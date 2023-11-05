@@ -54,9 +54,18 @@ public:
 	//생성자
 	Mesh();
 
+	std::string get_name() {
+		return name;
+	}
+
+	void set_name(const char* string) {
+		name = string;
+	}
+
 	//method
 	void Fill_Draw(const int&) const;
 	void LINE_Draw(const int&) const;
+	void AUTO_Draw(const bool& TRIANGLE = true) const;
 
 	void clear();
 	void setMesh(const int&, const float& radius = 10.0f);
@@ -65,6 +74,7 @@ public:
 	std::string getName() const;
 	void Object_Space_Transform(glm::mat4& ) const;
 
+	//마우스가 클릭했을 때부터 땔때까지의 직선
 	void line_initBuffers(const glm::vec3& start, const glm::vec3& end);
 
 };

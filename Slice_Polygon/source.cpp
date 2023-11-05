@@ -28,6 +28,7 @@ class Polygons : public Object {
 public:
 
 	float time;		//시간 매개변수
+	std::vector<glm::vec3> vertex;
 
 	//2차 베지어 곡선 (이동 루트)
 	glm::vec3 start_point;
@@ -141,8 +142,10 @@ void Draw_shape(const Object& obj);	//--- object가 가진 변환행렬과 mesh�
 void Timer_option(const int&, const bool&);
 void Change_switch(bool&);
 
+
 bool move(Polygons& o);
 GLvoid Gen_Timer(int value);
+void slide_polygon();
 
 
 //--------------------------------------------------------
@@ -171,6 +174,7 @@ void main(int argc, char** argv) //--- 윈도우 출력하고 콜백함수 설�
 
 	//--- 기본 셋팅 초기화
 	setup();
+	mouse.line_initBuffers({mousex, mousey, 0.0f},{movex, movey, 0.0f});
 
 	//키보드 조작 명령어 출력
 	for (std::string s : User_guide) {
@@ -462,7 +466,7 @@ GLvoid Timer(int value) { //--- 콜백 함수: 타이머 콜백 함수
 GLvoid Gen_Timer(int value) { //--- 콜백 함수: 타이머 콜백 함수
 
 	Polygons tmp;	//생성 1
-	tmp.reset(random_number(0x10, 0x16));
+	tmp.reset(random_number(0x10, 0x15));
 	object.push_back(tmp);	// 생성 2
 
 	if (debug) {
@@ -519,20 +523,206 @@ bool move(Polygons& o) {
 	return false;
 }
 
-void slide_polygon(Polygons& p) {
+float get_y(const GLfloat& m, const GLfloat& x, const GLfloat& c) {
+	return m * x + c;
+}
+
+float get_x(const GLfloat& m, const GLfloat& y, const GLfloat& c) {
+	return (1.0f / m) * (y - c);
+}
+
+
+void slide_polygon() {
 	//현재 잘린 도형의 정점 갯수(도형 종류)
-	int vertexnum = p.mesh.vertexnum;
+	int cnt{};
+	for (Polygons& p : object) {
+		bool flag{ false };	//한번이라도 마우스 직선이 도형의 변만 접할경우 true
+		//현재 도형의 정점 갯수
+		int vertexnum = p.mesh.vertexnum;
+		//--- 계산시 사용될 정점위치 및 마우스 벡터
+		std::vector<glm::vec3> vertex;
 
-	//현재 도형을 가르는 선
-	mousex; mousey; movex; movey;
+		glm::mat4 matrix{ 1.0f };
+		p.World_Transform(matrix);
+		for (int i = 0; i < vertexnum; i++) {
+			vertex.push_back((glm::mat3)matrix * p.mesh.vertex.at(i));
+		}
 
-	float dx = movex - mousex;
-	float dy = movey - mousey;
-	float m = dy / dx;
+		//--- 마우스 직선관련 값 계산
+		glm::vec3 mouse_start = { mousex, mousey, 0.0f };
+		float mouse_dx = movex - mousex;
+		float mouse_dy = movey - mousey;
+		float mouse_m = mouse_dy / mouse_dx;
+		float mouse_c = mousey - mouse_m * mousex ;
+		// y = mouse_m * x + mouse_c;	//마우스 직선의 방정식
 
-	float c = mousey - m * mousex;
+		//--- 새로 생성할 도형들 정점위치 저장용
+		std::vector<glm::vec3> first;
+		std::vector<glm::vec3> second;
 
-	//y = mx + c
+		bool select_obj{ true };	//true : fisrt, false: second
+
+		for (int i = 0; i < vertexnum; i++) {
+			//정점 2개를 이은 벡터로 직선의 방정식 구함.
+			glm::vec3& start = vertex[i];
+			glm::vec3& end = vertex[(i+1) % vertexnum];
+
+			float vertex_dx = end.x - start.x;
+			float vertex_dy = end.y - start.y;
+			float vertex_m = { vertex_dy / vertex_dx };
+			float vertex_c = start.y - vertex_m * start.x;
+			
+
+			// 두개의 정점이 만나는 위치 계산
+			// 두 직선이 만나는 지점 있다 => 만나는 지점에 vertex를 생성.
+			// 두 직선이 만나는 지점 없다 => 현재 선택된 vertex list에 다음 vertex를 추가
+			//y가 같을 경우로 계산
+			{
+				float meet_x = get_x(mouse_m, start.y, mouse_c);	//마우스가 vetex의 y값의 위치일때 x값
+				if (glm::min(start.x, end.x) < meet_x and meet_x < glm::max(start.x, end.x)) {
+					if (!flag) flag = true;	//도형이 잘렸는지 확인하는 flag 바꿈.
+
+					first.push_back({ meet_x, get_y(mouse_m, meet_x, mouse_c), 0.0f });
+					second.push_back({ meet_x, get_y(mouse_m, meet_x, mouse_c), 0.0f });
+					select_obj = select_obj == true ? false : true;
+					select_obj ? first.push_back(end) : second.push_back(end);
+				}
+				else {
+					select_obj? first.push_back(end) : second.push_back(end);
+				}
+			}
+
+		}		
+
+		// flag는 잘렸을 경우 true 반환
+		if (flag) {
+			//해당 버텍스 컬러 사용
+			std::vector<glm::vec3> first_color;
+			std::vector<glm::vec3> second_color;
+
+			//역 월드변환 계산
+			glm::mat4 reverse{ 1.0f };
+			p.World_Transform(reverse);
+			reverse = glm::inverse(reverse);
+
+			for (glm::vec3& v : first) {
+				v = (glm::mat3)reverse * v;
+				first_color.push_back(glm::vec3{ 0.5f } *v + 0.5f);
+			}
+
+			for (glm::vec3& v : second) {
+				v = (glm::mat3)reverse * v;
+				second_color.push_back(glm::vec3{ 0.5f } *v + 0.5f);
+			}
+		
+			{//first를 이용한 mesh 생성
+				//현재 도형에 초기화
+				p.mesh.clear();
+
+				std::vector<unsigned int> index;
+				if (first.size() >= 2) {
+					for (int i = 2; i < first.size(); i++) {
+						index.push_back(0);
+						index.push_back(i - 1);
+						index.push_back(i);
+					}
+				}
+				//first 를 현재 도형 p 에 저장
+				{
+					Mesh& m = p.mesh;
+					m.set_name("잘린 다각형");
+					glGenVertexArrays(1, &m.vao); //--- VAO 를 지정하고 할당하기
+					glBindVertexArray(m.vao); //--- VAO를 바인드하기
+
+					glGenBuffers(2, m.vbo); //--- 2개의 VBO를 지정하고 할당하기
+
+					//--- 1번째 VBO를 활성화하여 바인드하고, 버텍스 속성 (좌표값)을 저장
+					glBindBuffer(GL_ARRAY_BUFFER, m.vbo[0]);
+					//--- 변수 diamond 에서 버텍스 데이터 값을 버퍼에 복사한다.
+					//--- triShape 배열의 사이즈: 9 * float		
+					glBufferData(GL_ARRAY_BUFFER, first.size() * sizeof(glm::vec3), first.data(), GL_STATIC_DRAW);
+					//--- 좌표값을 attribute 인덱스 0번에 명시한다: 버텍스 당 3* float
+					glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+					//--- attribute 인덱스 0번을 사용가능하게 함
+					glEnableVertexAttribArray(0);
+
+					//--- 2번째 VBO를 활성화 하여 바인드 하고, 버텍스 속성 (색상)을 저장
+					glBindBuffer(GL_ARRAY_BUFFER, m.vbo[1]);
+					//--- 변수 colors에서 버텍스 색상을 복사한다.
+					//--- colors 배열의 사이즈: 9 *float
+					glBufferData(GL_ARRAY_BUFFER, first_color.size() * sizeof(glm::vec3), first_color.data(), GL_STATIC_DRAW);
+					//--- 색상값을 attribute 인덱스 1번에 명시한다: 버텍스 당 3*float
+					glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
+					//--- attribute 인덱스 1번을 사용 가능하게 함.
+					glEnableVertexAttribArray(1);
+
+					glGenBuffers(1, &m.ebo); //--- 2개의 VBO를 지정하고 할당하기
+					glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m.ebo);
+					glBufferData(GL_ELEMENT_ARRAY_BUFFER, index.size() * sizeof(unsigned int), index.data(), GL_STATIC_DRAW);
+
+
+					glBindVertexArray(0); //--- VAO를 바인드하기
+				}
+			}
+
+			{//second를 이용한 Polygon 생성
+
+				//second에 있는 버텍스는 새로운 Polygons 생성해서 집어넣기.
+				auto spot = object.begin() + cnt;
+				object.insert(spot, p);
+				//생성한 Polygons 를 래퍼런스하게 over_write함.
+				Polygons& new_p = object[cnt];
+				new_p.mesh.clear();
+
+				std::vector<unsigned int> index;
+				if (first.size() >= 2) {
+					for (int i = 2; i < first.size(); i++) {
+						index.push_back(0);
+						index.push_back(i - 1);
+						index.push_back(i);
+					}
+				}
+				//first 를 현재 도형 p 에 저장
+				{
+					Mesh& m = new_p.mesh;
+					m.set_name("잘린 다각형");
+					glGenVertexArrays(1, &m.vao); //--- VAO 를 지정하고 할당하기
+					glBindVertexArray(m.vao); //--- VAO를 바인드하기
+
+					glGenBuffers(2, m.vbo); //--- 2개의 VBO를 지정하고 할당하기
+
+					//--- 1번째 VBO를 활성화하여 바인드하고, 버텍스 속성 (좌표값)을 저장
+					glBindBuffer(GL_ARRAY_BUFFER, m.vbo[0]);
+					//--- 변수 diamond 에서 버텍스 데이터 값을 버퍼에 복사한다.
+					//--- triShape 배열의 사이즈: 9 * float		
+					glBufferData(GL_ARRAY_BUFFER, second.size() * sizeof(glm::vec3), second.data(), GL_STATIC_DRAW);
+					//--- 좌표값을 attribute 인덱스 0번에 명시한다: 버텍스 당 3* float
+					glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+					//--- attribute 인덱스 0번을 사용가능하게 함
+					glEnableVertexAttribArray(0);
+
+					//--- 2번째 VBO를 활성화 하여 바인드 하고, 버텍스 속성 (색상)을 저장
+					glBindBuffer(GL_ARRAY_BUFFER, m.vbo[1]);
+					//--- 변수 colors에서 버텍스 색상을 복사한다.
+					//--- colors 배열의 사이즈: 9 *float
+					glBufferData(GL_ARRAY_BUFFER, first_color.size() * sizeof(glm::vec3), first_color.data(), GL_STATIC_DRAW);
+					//--- 색상값을 attribute 인덱스 1번에 명시한다: 버텍스 당 3*float
+					glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
+					//--- attribute 인덱스 1번을 사용 가능하게 함.
+					glEnableVertexAttribArray(1);
+
+					glGenBuffers(1, &m.ebo); //--- 2개의 VBO를 지정하고 할당하기
+					glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m.ebo);
+					glBufferData(GL_ELEMENT_ARRAY_BUFFER, index.size() * sizeof(unsigned int), index.data(), GL_STATIC_DRAW);
+
+
+					glBindVertexArray(0); //--- VAO를 바인드하기
+				}
+			}			
+		}//하나의 Polygons  를 2개의 Polygons로 나눔 작업 끝.(flags == true)일떄 작업 끝.
+
+		cnt++;
+	}
 
 
 }

@@ -5,6 +5,7 @@
 // Cpp header include
 #include <iostream>
 #include <fstream>
+#include <string>
 #include <vector>
 #include <random>
 // OpenGL header include

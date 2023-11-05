@@ -8,6 +8,7 @@ Mesh::Mesh() {
 	for (GLuint& i : vbo) i = 0;
 	ebo = 0;
 
+	vertex.clear();
 	vertexnum = 0;
 	indexnum = 0;
 	polygonnum = 0;
@@ -27,6 +28,28 @@ void Mesh::Fill_Draw(const int& index) const {
 void Mesh::LINE_Draw(const int& index) const {
 	if (index <= indexnum / 3)
 		glDrawElements(GL_LINE_LOOP, 3, GL_UNSIGNED_INT, (void*)(index * 3 * sizeof(unsigned int)));
+}
+
+//---선으로 출력
+void Mesh::AUTO_Draw(const bool& TRIANGLE) const {
+	if (vertexnum < 3) {
+		if (vertexnum == 1) {
+			glDrawArrays(GL_POINTS, 0, 1);
+		}
+		else {
+			glDrawArrays(GL_LINES, 0, 2);
+		}
+	}
+	else {
+		if (TRIANGLE) {
+			glDrawElements(GL_TRIANGLES, indexnum, GL_UNSIGNED_INT, 0);
+		}
+		else {
+			for (int i = 0; i < indexnum / 3; i++) {
+				glDrawElements(GL_LINE_LOOP, 3, GL_UNSIGNED_INT, (void*)(i * 3 * sizeof(unsigned int)));
+			}
+		}
+	}
 }
 
 //---mesh에 정보를 세팅
@@ -61,7 +84,7 @@ void Mesh::setMesh(const int& mesh, const float& radius) {
 		name = "circle";
 		break;
 	case MESH_TRIANGLE:	case MESH_SQUARE:	case MESH_PENTAGON:	case MESH_HEXAGON:	case MESH_HEPTAGON:	case MESH_OCTAGON:
-		polygon(mesh - 13);
+		polygon(mesh - MESH_TRIANGLE + 3);
 		break;
 	}
 	polygonnum = indexnum / 3;
@@ -703,21 +726,23 @@ void Mesh::Object_Space_Transform(glm::mat4& transformMatrix) const {
 void Mesh::line_initBuffers(const glm::vec3& start, const glm::vec3& end) {
 	if (exist()) {
 		clear();
+		vertex.clear();
 	}
 	name = "Line";
-	std::vector<float> vertex;
 	std::vector<float> color;
 	std::vector<unsigned int> index;
 
 	{	//값을 집어넣음.
 		//--정점
-		vertex.push_back(start.x);
-		vertex.push_back(start.y);
-		vertex.push_back(0.0f);
+		vertex.push_back({ start.x, start.y, 0.0f });
+		//vertex.push_back(start.x);
+		//vertex.push_back(start.y);
+		//vertex.push_back(0.0f);
 
-		vertex.push_back(end.x);
-		vertex.push_back(end.y);
-		vertex.push_back(0.0f);
+		vertex.push_back({ end.x, end.y, 0.0f });
+		//vertex.push_back(end.x);
+		//vertex.push_back(end.y);
+		//vertex.push_back(0.0f);
 		//--색상
 		color.push_back(0.0f);
 		color.push_back(0.0f);
@@ -741,7 +766,7 @@ void Mesh::line_initBuffers(const glm::vec3& start, const glm::vec3& end) {
 		glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
 		//--- 변수 diamond 에서 버텍스 데이터 값을 버퍼에 복사한다.
 		//--- triShape 배열의 사이즈: 9 * float		
-		glBufferData(GL_ARRAY_BUFFER, vertex.size() * sizeof(float), vertex.data(), GL_STATIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, vertex.size() * sizeof(glm::vec3), vertex.data(), GL_STATIC_DRAW);
 		//--- 좌표값을 attribute 인덱스 0번에 명시한다: 버텍스 당 3* float
 		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
 		//--- attribute 인덱스 0번을 사용가능하게 함
