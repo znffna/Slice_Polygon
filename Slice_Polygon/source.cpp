@@ -74,7 +74,8 @@ void Polygons::reset(const float& polygon) {
 	}
 }
 
-float speed{ 0.016f }; 
+float speed{ 0.002f }; 
+//float speed{ 0.016f }; 
 
 
 void Polygons::move() {
@@ -560,7 +561,7 @@ void slide_polygon() {
 	//현재 잘린 도형의 정점 갯수(도형 종류)
 	int cnt{};
 	for (Polygons& p : object) {
-		std::cout << "slide_polygon 에서 각 도형마다의 호출 횟수 :" << cnt << '\n';
+		//std::cout << "slide_polygon 에서 각 도형마다의 호출 횟수 :" << cnt << '\n';
 
 		bool flag{ false };	//한번이라도 마우스 직선이 도형의 변만 접할경우 true
 		//현재 도형의 정점 갯수
@@ -613,8 +614,13 @@ void slide_polygon() {
 				}
 
 				float meet_x = (vertex_c  - mouse_c) / (mouse_m - vertex_m);	//마우스가 vetex의 y값의 위치일때 x값
-				if (glm::min(start.x, end.x) < meet_x and meet_x < glm::max(start.x, end.x)) {
-					if (!flag) flag = true;	//도형이 잘렸는지 확인하는 flag 바꿈.
+				float meet_y = get_y(vertex_m, meet_x, vertex_c);
+				bool check_x = glm::min(start.x, end.x) < meet_x and meet_x < glm::max(start.x, end.x) and glm::min(mousex, movex) < meet_x and meet_x < glm::max(mousex, movex);
+				bool check_y = glm::min(start.y, end.y) < meet_y and meet_y < glm::max(start.y, end.y) and glm::min(mousey, movey) < meet_y and meet_y < glm::max(mousey, movey);
+				if (check_x and check_y) {
+					if (!flag) { //도형이 잘렸는지 확인하는 flag 바꿈.
+						flag = true;
+					}	
 
 					first.push_back({ meet_x, get_y(mouse_m, meet_x, mouse_c), 0.0f });
 					second.push_back({ meet_x, get_y(mouse_m, meet_x, mouse_c), 0.0f });
@@ -622,28 +628,27 @@ void slide_polygon() {
 					select_obj = select_obj == true ? false : true;
 				}
 
-				{
-					std::cout << "first 정점 --" << '\n';
-					for (glm::vec3& v : first) {
-						print_vec3(v);
-					}
-					std::cout << " first 정점 갯수: " << first.size() << '\n';
-					std::cout << "second 정점 --" << '\n';
-					for (glm::vec3& v : second) {
-						print_vec3(v);
-					}
-					std::cout << " second 정점 갯수: " << second.size() << '\n';
-					std::cout << "-------------" << '\n';
+				//{
+				//	std::cout << "first 정점 --" << '\n';
+				//	for (glm::vec3& v : first) {
+				//		print_vec3(v);
+				//	}
+				//	std::cout << " first 정점 갯수: " << first.size() << '\n';
+				//	std::cout << "second 정점 --" << '\n';
+				//	for (glm::vec3& v : second) {
+				//		print_vec3(v);
+				//	}
+				//	std::cout << " second 정점 갯수: " << second.size() << '\n';
+				//	std::cout << "-------------" << '\n';
 
-				}
+				//}
 			}
 
 		}		
 
 		// flag는 잘렸을 경우 true 반환
 		if (flag) {
-			//if (debug) {
-			{
+			if (debug){
 				std::cout << "first 정점 --" << '\n';
 				for (glm::vec3& v : first) {
 					print_vec3(v);
@@ -664,16 +669,16 @@ void slide_polygon() {
 			p.World_Transform(reverse);
 			reverse = glm::inverse(reverse);
 
-			std::cout << "최종 변환한 first 좌표: object 좌표계로 전환한 좌표" << '\n';
+			//std::cout << "최종 변환한 first 좌표: object 좌표계로 전환한 좌표" << '\n';
 			for (glm::vec3& v : first) {
 				v = (glm::mat3)reverse * v;
-				print_vec3(v);
+			//	print_vec3(v);
 				first_color.push_back(glm::vec3{ 0.5f } * v + 0.5f);
 			}
-			std::cout << "최종 변환한 second 좌표: object 좌표계로 전환한 좌표" << '\n';
+			//std::cout << "최종 변환한 second 좌표: object 좌표계로 전환한 좌표" << '\n';
 			for (glm::vec3& v : second) {
 				v = (glm::mat3)reverse * v;
-				print_vec3(v);
+			//	print_vec3(v);
 				second_color.push_back(glm::vec3{ 0.5f } *v + 0.5f);
 			}
 		
@@ -741,11 +746,7 @@ void slide_polygon() {
 				//second에 있는 버텍스는 새로운 Polygons 생성해서 집어넣기.
 				//auto spot = object.begin() + cnt;
 				//object.insert(spot, p);
-				object.push_back(p);
-
-				if (object.size() == 0) {
-					std::cout << "이거 뭐임." << '\n';
-				}			
+				object.push_back(p);	
 				Polygons& new_p = object.at(object.size() - 1);
 				new_p.mesh.clear();
 
@@ -802,13 +803,12 @@ void slide_polygon() {
 
 				new_p.control_point = glm::vec3{ 0.5f } *(p.start_point + p.end_point);
 				new_p.time = 0.0f;
-			}			
+			}// second로 하나의 polygon mesh 작업 끝.		
 
 
 		}//하나의 Polygons  를 2개의 Polygons로 나눔 작업 끝.(flags == true)일떄 작업 끝.
 
 		cnt++;
-	}
+	}// 하나의 polygon 작업이 끝남.
 
-
-}
+}// slide_polygon이 끝남.
