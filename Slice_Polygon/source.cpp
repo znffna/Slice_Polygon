@@ -121,6 +121,7 @@ float mousex{ 0.0f };		//마우스의 x값
 float mousey{ 0.0f };		//마우스의 y값
 float movex{ 0.0f };		//마우스 클릭중 x값
 float movey{ 0.0f };		//마우스 클릭중 y값
+
 Mesh mouse;
 
 //세이더 클래스 생성
@@ -144,7 +145,6 @@ void Change_switch(bool&);
 
 
 bool move(Polygons& o);
-GLvoid Gen_Timer(int value);
 void slide_polygon();
 
 
@@ -191,7 +191,6 @@ void main(int argc, char** argv) //--- 윈도우 출력하고 콜백함수 설�
 	glutMotionFunc(Motion);
 
 	glutTimerFunc(16, Timer, 0);
-	glutTimerFunc(1000, Gen_Timer, 0);
 
 	//--- 메인 루프 진행
 	glutMainLoop();
@@ -213,6 +212,7 @@ GLvoid setup() {
 
 	{	//마우스 초기화
 		mouse.clear();
+		mouse.line_initBuffers({ mousex, mousey, 0.0f }, { movex, movey, 0.0f });
 
 	}
 
@@ -295,8 +295,19 @@ GLvoid drawScene()
 		for (Polygons& o : object) {
 			glBindVertexArray(o.getVao());
 			shader.worldTransform(o);
+			{
+				std::cout << "정점 위치 : " << '\n';
+				DebugPrintVBOContents(o.mesh.vbo[0], o.mesh.vertexnum, sizeof(glm::vec3));
+				std::cout << "정점 색깔 : " << '\n';
+				DebugPrintVBOContents(o.mesh.vbo[1], o.mesh.vertexnum, sizeof(glm::vec3));
+				std::cout << "인덱스 배열 : " << '\n';
+				DebugPrintVBOContents(o.mesh.ebo, o.mesh.vertexnum, sizeof(glm::vec3));
+
+			}
+
 			for (int i = 0; i < o.mesh.indexnum; i++) {
-				drawstyle? o.mesh.Fill_Draw(i): o.mesh.LINE_Draw(i);
+				//drawstyle? o.mesh.Fill_Draw(i): o.mesh.LINE_Draw(i);
+				o.mesh.AUTO_Draw();
 			}
 		}
 	}
@@ -441,6 +452,20 @@ GLvoid handleMouseWheel(int wheel, int direction, int x, int y) {
 
 //--- 타이머 콜백 함수
 GLvoid Timer(int value) { //--- 콜백 함수: 타이머 콜백 함수
+
+	//도형 생성 관련
+	static int gen_time{ 0 };
+	if (gen_time == 0) {
+		Polygons tmp;	//생성 1
+		tmp.reset(random_number(0x10, 0x15));
+		object.push_back(tmp);	// 생성 2
+
+		if (debug) {
+			std::cout << "object에 현재 도형 갯수 :" << object.size() << '\n';
+		}
+	}
+
+	// 도형 삭제 관련 
 	int index{0};
 	std::vector<int> erase_list;
 	for (Polygons& o : object) {
@@ -450,6 +475,7 @@ GLvoid Timer(int value) { //--- 콜백 함수: 타이머 콜백 함수
 		}
 		index++;
 	}
+
 	// 삭제 시켜야 하는게 있을 시 도는 for loop 문
 	for (auto it = erase_list.rbegin(); it != erase_list.rend(); ++it) {
 		//해당 도형을 object 에서 삭제 시킨다.
@@ -459,22 +485,12 @@ GLvoid Timer(int value) { //--- 콜백 함수: 타이머 콜백 함수
 		}
 	}
 
+
+	gen_time = (gen_time + 1) % 60;
+
 	glutPostRedisplay();	
 	glutTimerFunc(16, Timer, value); // 타이머함수 재 설정
 }
-
-GLvoid Gen_Timer(int value) { //--- 콜백 함수: 타이머 콜백 함수
-
-	Polygons tmp;	//생성 1
-	tmp.reset(random_number(0x10, 0x15));
-	object.push_back(tmp);	// 생성 2
-
-	if (debug) {
-		std::cout << "object에 현재 도형 갯수 :" << object.size() << '\n';
-	}
-
-	glutTimerFunc(1000, Gen_Timer, value); // 타이머함수 재 설정
-}	// 삭제 1
 
 //----------------------------------------
 //실습용 함수 정의

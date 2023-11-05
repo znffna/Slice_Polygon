@@ -84,6 +84,7 @@ void Mesh::setMesh(const int& mesh, const float& radius) {
 		name = "circle";
 		break;
 	case MESH_TRIANGLE:	case MESH_SQUARE:	case MESH_PENTAGON:	case MESH_HEXAGON:	case MESH_HEPTAGON:	case MESH_OCTAGON:
+		std::cout << "생성되는 도형 : " << mesh - MESH_TRIANGLE + 3 << '\n';
 		polygon(mesh - MESH_TRIANGLE + 3);
 		break;
 	}
@@ -608,28 +609,7 @@ void Mesh::circle(const float& radius) {
 
 void Mesh::polygon(const int& polygon) {
 	//name = polygon + "각형";
-	switch (polygon) {
-	case 3:
-		name = "삼각형";
-		break;
-	case 4:
-		name = "사각형";
-		break;
-	case 5:
-		name = "오각형";
-		break;
-	case 6:
-		name = "육각형";
-		break;
-	case 7:
-		name = "칠각형";
-		break;
-	case 8:
-		name = "팔각형";
-		break;
-	}
-
-	std::vector<float> vertex;
+	std::cout << "생성할 polygon :" << polygon << "\n";
 	std::vector<float> color;
 	std::vector<unsigned int> index;
 
@@ -637,12 +617,10 @@ void Mesh::polygon(const int& polygon) {
 	float degree{ 360.0f / polygon };
 	unsigned int count{ 0 };
 
-	while(count < polygon){
-		vertex.push_back(cos(glm::radians(degree * count)) * LEN);	//x
-		vertex.push_back(sin(glm::radians(degree * count)) * LEN);	//y
-		vertex.push_back(0.0f);	//z
-
-		this->vertex.push_back({ cos(glm::radians(degree * count)) * LEN, sin(glm::radians(degree * count)) * LEN, 0.0f });
+	while (count < polygon) {
+		vertex.push_back({cos(glm::radians(degree * count)) * LEN, sin(glm::radians(degree * count)) * LEN, 0.0f});	//x
+		//vertex.push_back(sin(glm::radians(degree * count)) * LEN);	//y
+		//vertex.push_back(0.0f);	//z
 
 		color.push_back(rainbow[count % 8].x);
 		color.push_back(rainbow[count % 8].y);
@@ -667,16 +645,16 @@ void Mesh::polygon(const int& polygon) {
 	//	std::cout << "}" << '\n';
 	//}
 	{
-		glGenVertexArrays(1, &vao); //--- VAO 를 지정하고 할당하기
+		if(!exist())glGenVertexArrays(1, &vao); //--- VAO 를 지정하고 할당하기
 		glBindVertexArray(vao); //--- VAO를 바인드하기
 
-		glGenBuffers(2, vbo); //--- 2개의 VBO를 지정하고 할당하기
+		if (!exist())glGenBuffers(2, vbo); //--- 2개의 VBO를 지정하고 할당하기
 
 		//--- 1번째 VBO를 활성화하여 바인드하고, 버텍스 속성 (좌표값)을 저장
 		glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
 		//--- 변수 diamond 에서 버텍스 데이터 값을 버퍼에 복사한다.
 		//--- triShape 배열의 사이즈: 9 * float		
-		glBufferData(GL_ARRAY_BUFFER, vertex.size() * sizeof(float), vertex.data(), GL_STATIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, vertex.size() * sizeof(glm::vec3), vertex.data(), GL_STATIC_DRAW);
 		//--- 좌표값을 attribute 인덱스 0번에 명시한다: 버텍스 당 3* float
 		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
 		//--- attribute 인덱스 0번을 사용가능하게 함
@@ -692,16 +670,36 @@ void Mesh::polygon(const int& polygon) {
 		//--- attribute 인덱스 1번을 사용 가능하게 함.
 		glEnableVertexAttribArray(1);
 
-		glGenBuffers(1, &ebo); //--- 2개의 VBO를 지정하고 할당하기
+		if (!exist())glGenBuffers(1, &ebo); //--- 2개의 VBO를 지정하고 할당하기
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, index.size() * sizeof(unsigned int), index.data(), GL_STATIC_DRAW);
 
 
 		glBindVertexArray(0); //--- VAO를 바인드하기
 	}
+
 	vertexnum = vertex.size() / 3;
 	indexnum = index.size();
-
+	switch (polygon) {
+	case 3:
+		name = "삼각형";
+		break;
+	case 4:
+		name = "사각형";
+		break;
+	case 5:
+		name = "오각형";
+		break;
+	case 6:
+		name = "육각형";
+		break;
+	case 7:
+		name = "칠각형";
+		break;
+	case 8:
+		name = "팔각형";
+		break;
+	}
 }
 
 bool Mesh::exist() const {
