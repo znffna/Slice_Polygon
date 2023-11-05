@@ -34,3 +34,7 @@ glm::vec3 CalculateBezierPoint(float t, const glm::vec3& p0, const glm::vec3& p1
 	p += tt * p2; // t^2 * P2
 	return p;
 }
+
+void print_vec3(const glm::vec3& vector) {
+	std::cout << "{" << vector.x << ", " << vector.y << ", " << vector.z << "} " << '\n';
+}

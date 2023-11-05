@@ -50,4 +50,5 @@ void degree_range_normalization(float& );
 // 2차 베지어 곡선 위치 계산 함수
 glm::vec3 CalculateBezierPoint(float t, const glm::vec3& p0, const glm::vec3& p1, const glm::vec3& p2);
 
+void print_vec3(const glm::vec3&);
 #endif //
