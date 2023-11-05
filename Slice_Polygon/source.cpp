@@ -282,6 +282,7 @@ GLvoid drawScene()
 	{
 
 	}
+
 	// 마우스 출력
 	{
 		if (leftdown) {
@@ -296,6 +297,7 @@ GLvoid drawScene()
 			glBindVertexArray(o.getVao());
 			shader.worldTransform(o);
 			{
+				std::cout << "glm::vec3 크기" << sizeof(glm::vec3)<< '\n';
 				std::cout << "정점 위치 : " << '\n';
 				DebugPrintVBOContents(o.mesh.vbo[0], o.mesh.vertexnum, sizeof(glm::vec3));
 				std::cout << "정점 색깔 : " << '\n';
@@ -455,10 +457,9 @@ GLvoid Timer(int value) { //--- 콜백 함수: 타이머 콜백 함수
 
 	//도형 생성 관련
 	static int gen_time{ 0 };
-	if (gen_time == 0) {
-		Polygons tmp;	//생성 1
-		tmp.reset(random_number(0x10, 0x15));
-		object.push_back(tmp);	// 생성 2
+	if (gen_time == 59) {
+		object.push_back(Polygons());
+		object.at(object.size() - 1).reset(random_number(MESH_TRIANGLE, MESH_OCTAGON));
 
 		if (debug) {
 			std::cout << "object에 현재 도형 갯수 :" << object.size() << '\n';

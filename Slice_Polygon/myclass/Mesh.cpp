@@ -100,11 +100,13 @@ void Mesh::clear() {
 		vertex.clear();
 	}
 	name = "None";
+
 	vao = 0;
 	for (GLuint& i : vbo) i = 0;
 	ebo = 0;
 	vertexnum = 0;
 	indexnum = 0;
+
 	origin_translation = { 0.0f, 0.0f, 0.0f };
 	origin_scale = { 1.0f, 1.0f, 1.0f };
 	polygon_center = nullptr;
@@ -610,6 +612,7 @@ void Mesh::circle(const float& radius) {
 void Mesh::polygon(const int& polygon) {
 	//name = polygon + "각형";
 	std::cout << "생성할 polygon :" << polygon << "\n";
+	std::vector<float> vertex;
 	std::vector<float> color;
 	std::vector<unsigned int> index;
 
@@ -618,9 +621,12 @@ void Mesh::polygon(const int& polygon) {
 	unsigned int count{ 0 };
 
 	while (count < polygon) {
-		vertex.push_back({cos(glm::radians(degree * count)) * LEN, sin(glm::radians(degree * count)) * LEN, 0.0f});	//x
-		//vertex.push_back(sin(glm::radians(degree * count)) * LEN);	//y
-		//vertex.push_back(0.0f);	//z
+		//vertex.push_back({cos(glm::radians(degree * count)) * LEN, sin(glm::radians(degree * count)) * LEN, 0.0f});	//x
+		vertex.push_back(cos(glm::radians(degree * count)) * LEN);	//y
+		vertex.push_back(sin(glm::radians(degree * count)) * LEN);	//y
+		vertex.push_back(0.0f);	//z
+		this-> vertex.push_back({ cos(glm::radians(degree * count)) * LEN, sin(glm::radians(degree * count)) * LEN, 0.0f });	//x
+		
 
 		color.push_back(rainbow[count % 8].x);
 		color.push_back(rainbow[count % 8].y);
@@ -635,26 +641,51 @@ void Mesh::polygon(const int& polygon) {
 		}
 		count++;
 	}
-	////index 생성이 잘되는지 체크
-	//{
-	//	
-	//	std::cout << "Index : ";
-	//	for (unsigned int i : index) {
-	//		std::cout << i << ", ";
-	//	}
-	//	std::cout << "}" << '\n';
-	//}
+	std::cout << "현재 모든 vector의 내용" << '\n';
 	{
-		if(!exist())glGenVertexArrays(1, &vao); //--- VAO 를 지정하고 할당하기
+		int cnt{};
+		std::cout << "vertex ---- " << '\n';
+		for (float& f : vertex) {
+			std::cout << f << ", ";
+			cnt++;
+			if (cnt % 3 == 0) {
+				std::cout << '\n';
+			}
+		}
+		cnt = 0;
+		std::cout << "color ---- " << '\n';
+		for (float& f : color) {
+			std::cout << f << ", ";
+			cnt++;
+			if (cnt % 3 == 0) {
+				std::cout << '\n';
+			}
+		}
+		std::cout << "index ---- " << '\n';
+		for (unsigned int& ui : index) {
+			std::cout << ui << ", ";
+			cnt++;
+			if (cnt % 3 == 0) {
+				std::cout << '\n';
+			}
+		}
+	}
+
+	{
+		if(!exist())
+			glGenVertexArrays(1, &vao); //--- VAO 를 지정하고 할당하기
 		glBindVertexArray(vao); //--- VAO를 바인드하기
 
-		if (!exist())glGenBuffers(2, vbo); //--- 2개의 VBO를 지정하고 할당하기
+		if (!exist())
+			glGenBuffers(2, vbo); //--- 2개의 VBO를 지정하고 할당하기
 
 		//--- 1번째 VBO를 활성화하여 바인드하고, 버텍스 속성 (좌표값)을 저장
 		glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
 		//--- 변수 diamond 에서 버텍스 데이터 값을 버퍼에 복사한다.
 		//--- triShape 배열의 사이즈: 9 * float		
-		glBufferData(GL_ARRAY_BUFFER, vertex.size() * sizeof(glm::vec3), vertex.data(), GL_STATIC_DRAW);
+
+		glBufferData(GL_ARRAY_BUFFER, vertex.size() * sizeof(float), vertex.data(), GL_STATIC_DRAW);
+
 		//--- 좌표값을 attribute 인덱스 0번에 명시한다: 버텍스 당 3* float
 		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
 		//--- attribute 인덱스 0번을 사용가능하게 함
@@ -670,7 +701,8 @@ void Mesh::polygon(const int& polygon) {
 		//--- attribute 인덱스 1번을 사용 가능하게 함.
 		glEnableVertexAttribArray(1);
 
-		if (!exist())glGenBuffers(1, &ebo); //--- 2개의 VBO를 지정하고 할당하기
+		if (!exist())
+			glGenBuffers(1, &ebo); //--- 2개의 VBO를 지정하고 할당하기
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, index.size() * sizeof(unsigned int), index.data(), GL_STATIC_DRAW);
 
