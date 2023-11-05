@@ -28,6 +28,7 @@ class Mesh {
 private:
 	std::string name;
 
+
 	void spiral();
 	void axis();
 	void tetrahedron();
@@ -53,6 +54,62 @@ public:
 	//---멤버 함수
 	//생성자
 	Mesh();
+	/*
+	Mesh(const Mesh& other) {	
+		//vao 생성
+		glGenVertexArrays(1, &vao);
+		glBindVertexArray(vao);
+
+		//vbo 복사
+		glGenBuffers(2, vbo);
+		for (int i = 0; i < 2; i++) {
+			int bufferSize = other.vertexnum * sizeof(glm::vec3);
+			glBindBuffer(GL_COPY_READ_BUFFER, other.vbo[i]);
+
+			glBindBuffer(GL_COPY_WRITE_BUFFER, vbo[i]);
+			glBufferData(GL_COPY_WRITE_BUFFER, bufferSize, nullptr, GL_STATIC_DRAW);
+			glCopyBufferSubData(GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, 0, 0, bufferSize);	// copy_read buffer에 있는 내용을 copy_write에 복사한다.(buffersize만큼)
+		
+			//--- 좌표값을 attribute 인덱스 0번에 명시한다: 버텍스 당 3* float
+			glVertexAttribPointer(i, 3, GL_FLOAT, GL_FALSE, 0, 0);
+			//--- attribute 인덱스 0번을 사용가능하게 함
+			glEnableVertexAttribArray(i);		
+
+			glBindBuffer(GL_COPY_READ_BUFFER, 0);
+		}
+
+		//ebo 복사
+		glGenBuffers(1, &ebo);
+		{
+			int bufferSize = other.indexnum * sizeof(unsigned int);
+			glBindBuffer(GL_COPY_READ_BUFFER, other.ebo);
+
+			glGenBuffers(1, &ebo);
+			glBindBuffer(GL_COPY_WRITE_BUFFER, ebo);
+			glBufferData(GL_COPY_WRITE_BUFFER, bufferSize, nullptr, GL_STATIC_DRAW);
+			glCopyBufferSubData(GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, 0, 0, bufferSize);		
+		}
+
+
+		
+		//vertex 복제
+		for (const glm::vec3& v : other.vertex) {
+			vertex.push_back(v);
+		}
+
+		vertexnum = other.vertexnum;
+		indexnum = other.indexnum;
+		polygonnum = other.polygonnum;
+		origin_scale = other.origin_scale;
+		name = other.name;
+	}*/
+
+	~Mesh() {
+		//일단 버그나니까 주석처리
+		//glDeleteBuffers(2, vbo);
+		//glDeleteBuffers(1, &ebo);
+		//glDeleteVertexArrays(1, &vao);
+	}
 
 	std::string get_name() {
 		return name;

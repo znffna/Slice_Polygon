@@ -15,10 +15,7 @@ Object::Object() {
 }
 
 Object::~Object() {
-	//일단 버그나니까 주석처리
-	/*glDeleteBuffers(2, mesh.vbo);
-	glDeleteBuffers(1, &mesh.ebo);
-	glDeleteVertexArrays(1, &mesh.vao);*/
+
 }
 
 //Object 설정 초기화

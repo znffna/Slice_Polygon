@@ -75,6 +75,8 @@ void Polygons::reset(const float& polygon) {
 }
 
 float speed{ 0.016f }; 
+
+
 void Polygons::move() {
 	//현재 t를 증가시킴.
 	time += speed;
@@ -287,8 +289,8 @@ GLvoid drawScene()
 	// 마우스 출력
 	{
 		if (leftdown) {
-			//mouse.line_initBuffers({ mousex, mousey,0.0f }, { movex, movey, 0.0f });
 			glBindVertexArray(mouse.vao);
+
 			// 단위행렬 월드변환
 			glm::mat4 matrix{ 1.0f };
 			glUniformMatrix4fv(shader.getUniformLocate("modelTransform"), 1, GL_FALSE, glm::value_ptr(matrix));
@@ -303,20 +305,9 @@ GLvoid drawScene()
 		for (Polygons& o : object) {
 			glBindVertexArray(o.getVao());
 			shader.worldTransform(o);
-			//if(debug){
-			//	std::cout << "glm::vec3 크기" << sizeof(glm::vec3)<< '\n';
-			//	std::cout << "정점 위치 : " << '\n';
-			//	DebugPrintVBOContents(o.mesh.vbo[0], o.mesh.vertexnum, sizeof(glm::vec3));
-			//	std::cout << "정점 색깔 : " << '\n';
-			//	DebugPrintVBOContents(o.mesh.vbo[1], o.mesh.vertexnum, sizeof(glm::vec3));
-			//	std::cout << "인덱스 배열 : " << '\n';
-			//	DebugPrintVBOContents(o.mesh.ebo, o.mesh.vertexnum, sizeof(unsigned int));
-
-			//}
-
 			for (int i = 0; i < o.mesh.indexnum; i++) {
 				//drawstyle? o.mesh.Fill_Draw(i): o.mesh.LINE_Draw(i);
-				o.mesh.AUTO_Draw();
+				o.mesh.AUTO_Draw(drawstyle);			
 			}
 		}
 	}
@@ -478,6 +469,8 @@ GLvoid Timer(int value) { //--- 콜백 함수: 타이머 콜백 함수
 		if (debug) {
 			std::cout << "object에 현재 도형 갯수 :" << object.size() << '\n';
 		}
+		std::cout << "object에 현재 도형 갯수 :" << object.size() << '\n';
+		std::cout << "object의 vao 넘버:" << object.at(object.size() - 1).mesh.vao << '\n';
 	}
 
 	// 도형 삭제 관련 
@@ -567,6 +560,8 @@ void slide_polygon() {
 	//현재 잘린 도형의 정점 갯수(도형 종류)
 	int cnt{};
 	for (Polygons& p : object) {
+		std::cout << "slide_polygon 에서 각 도형마다의 호출 횟수 :" << cnt << '\n';
+
 		bool flag{ false };	//한번이라도 마우스 직선이 도형의 변만 접할경우 true
 		//현재 도형의 정점 갯수
 		int vertexnum = p.mesh.vertexnum;
@@ -575,7 +570,8 @@ void slide_polygon() {
 
 		glm::mat4 matrix{ 1.0f };
 		p.World_Transform(matrix);
-		for (int i = 0; i < vertexnum; i++) {
+
+		for (int i = 0; i < p.mesh.vertex.size(); i++) {
 			vertex.push_back((glm::mat3)matrix * p.mesh.vertex.at(i));
 		}
 
@@ -593,10 +589,10 @@ void slide_polygon() {
 
 		bool select_obj{ true };	//true : fisrt, false: second
 
-		for (int i = 0; i < vertexnum; i++) {
+		for (int i = 0; i < vertex.size(); i++) {
 			//정점 2개를 이은 벡터로 직선의 방정식 구함.
-			glm::vec3& start = vertex[i];
-			glm::vec3& end = vertex[(i+1) % vertexnum];
+			glm::vec3& start = vertex.at(i);
+			glm::vec3& end = vertex.at((i + 1) % vertex.size());
 
 			float vertex_dx = end.x - start.x;
 			float vertex_dy = end.y - start.y;
@@ -609,7 +605,14 @@ void slide_polygon() {
 			// 두 직선이 만나는 지점 없다 => 현재 선택된 vertex list에 다음 vertex를 추가
 			//y가 같을 경우로 계산
 			{
-				float meet_x = get_x(mouse_m, start.y, mouse_c);	//마우스가 vetex의 y값의 위치일때 x값
+				select_obj ? first.push_back(start) : second.push_back(start);
+
+				//float meet_x = get_x(mouse_m, start.y, mouse_c);	//마우스가 vetex의 y값의 위치일때 x값
+				if (mouse_m == vertex_m) {	//절대 안만남.
+					continue;
+				}
+
+				float meet_x = (vertex_c  - mouse_c) / (mouse_m - vertex_m);	//마우스가 vetex의 y값의 위치일때 x값
 				if (glm::min(start.x, end.x) < meet_x and meet_x < glm::max(start.x, end.x)) {
 					if (!flag) flag = true;	//도형이 잘렸는지 확인하는 flag 바꿈.
 
@@ -617,10 +620,21 @@ void slide_polygon() {
 					second.push_back({ meet_x, get_y(mouse_m, meet_x, mouse_c), 0.0f });
 
 					select_obj = select_obj == true ? false : true;
-					select_obj ? first.push_back(end) : second.push_back(end);
 				}
-				else {
-					select_obj? first.push_back(end) : second.push_back(end);
+
+				{
+					std::cout << "first 정점 --" << '\n';
+					for (glm::vec3& v : first) {
+						print_vec3(v);
+					}
+					std::cout << " first 정점 갯수: " << first.size() << '\n';
+					std::cout << "second 정점 --" << '\n';
+					for (glm::vec3& v : second) {
+						print_vec3(v);
+					}
+					std::cout << " second 정점 갯수: " << second.size() << '\n';
+					std::cout << "-------------" << '\n';
+
 				}
 			}
 
@@ -650,13 +664,16 @@ void slide_polygon() {
 			p.World_Transform(reverse);
 			reverse = glm::inverse(reverse);
 
+			std::cout << "최종 변환한 first 좌표: object 좌표계로 전환한 좌표" << '\n';
 			for (glm::vec3& v : first) {
 				v = (glm::mat3)reverse * v;
-				first_color.push_back(glm::vec3{ 0.5f } *v + 0.5f);
+				print_vec3(v);
+				first_color.push_back(glm::vec3{ 0.5f } * v + 0.5f);
 			}
-
+			std::cout << "최종 변환한 second 좌표: object 좌표계로 전환한 좌표" << '\n';
 			for (glm::vec3& v : second) {
 				v = (glm::mat3)reverse * v;
+				print_vec3(v);
 				second_color.push_back(glm::vec3{ 0.5f } *v + 0.5f);
 			}
 		
@@ -707,21 +724,34 @@ void slide_polygon() {
 
 
 					glBindVertexArray(0); //--- VAO를 바인드하기
+					m.indexnum = index.size();
+					m.vertexnum = first.size();
+					m.polygonnum = first.size();
 				}
+
+				p.end_point.x = { 0.5f * (p.end_point.x + p.translation.x) };
+				p.start_point = p.translation;
+
+				p.control_point = glm::vec3{ 0.5f } *(p.start_point + p.end_point);
+				p.time = 0.0f;				
 			}
 
 			{//second를 이용한 Polygon 생성
 
 				//second에 있는 버텍스는 새로운 Polygons 생성해서 집어넣기.
-				auto spot = object.begin() + cnt;
-				object.insert(spot, p);
-				//생성한 Polygons 를 래퍼런스하게 over_write함.
-				Polygons& new_p = object[cnt];
+				//auto spot = object.begin() + cnt;
+				//object.insert(spot, p);
+				object.push_back(p);
+
+				if (object.size() == 0) {
+					std::cout << "이거 뭐임." << '\n';
+				}			
+				Polygons& new_p = object.at(object.size() - 1);
 				new_p.mesh.clear();
 
 				std::vector<unsigned int> index;
-				if (first.size() >= 2) {
-					for (int i = 2; i < first.size(); i++) {
+				if (second.size() >= 2) {
+					for (int i = 2; i < second.size(); i++) {
 						index.push_back(0);
 						index.push_back(i - 1);
 						index.push_back(i);
@@ -750,7 +780,7 @@ void slide_polygon() {
 					glBindBuffer(GL_ARRAY_BUFFER, m.vbo[1]);
 					//--- 변수 colors에서 버텍스 색상을 복사한다.
 					//--- colors 배열의 사이즈: 9 *float
-					glBufferData(GL_ARRAY_BUFFER, first_color.size() * sizeof(glm::vec3), first_color.data(), GL_STATIC_DRAW);
+					glBufferData(GL_ARRAY_BUFFER, second_color.size() * sizeof(glm::vec3), second_color.data(), GL_STATIC_DRAW);
 					//--- 색상값을 attribute 인덱스 1번에 명시한다: 버텍스 당 3*float
 					glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
 					//--- attribute 인덱스 1번을 사용 가능하게 함.
@@ -762,8 +792,19 @@ void slide_polygon() {
 
 
 					glBindVertexArray(0); //--- VAO를 바인드하기
+					m.indexnum = index.size();
+					m.vertexnum = second.size() * 3;
+					m.polygonnum = second.size();
 				}
+
+				new_p.end_point.x = { 0.5f * (p.end_point.x + p.translation.x) };
+				new_p.start_point = p.translation;
+
+				new_p.control_point = glm::vec3{ 0.5f } *(p.start_point + p.end_point);
+				new_p.time = 0.0f;
 			}			
+
+
 		}//하나의 Polygons  를 2개의 Polygons로 나눔 작업 끝.(flags == true)일떄 작업 끝.
 
 		cnt++;

@@ -30,7 +30,7 @@ void Mesh::LINE_Draw(const int& index) const {
 		glDrawElements(GL_LINE_LOOP, 3, GL_UNSIGNED_INT, (void*)(index * 3 * sizeof(unsigned int)));
 }
 
-//---선으로 출력
+//---정점 갯수에 따라 최대치로 출력
 void Mesh::AUTO_Draw(const bool& TRIANGLE) const {
 	if (vertexnum < 3) {
 		if (vertexnum == 1) {
@@ -98,9 +98,9 @@ void Mesh::clear() {
 		//glDeleteBuffers(1, &ebo);
 		//glDeleteBuffers(2, vbo);
 		//glDeleteVertexArrays(1, &vao);
-		vertex.clear();
 	}
 	name = "None";
+	vertex.clear();
 
 	vao = 0;
 	for (GLuint& i : vbo) i = 0;
@@ -755,11 +755,9 @@ void Mesh::Object_Space_Transform(glm::mat4& transformMatrix) const {
 
 
 void Mesh::line_initBuffers(const glm::vec3& start, const glm::vec3& end) {
-	if (exist()) {
-		clear();
-		vertex.clear();
-	}
-	name = "Line";
+
+	vertex.clear();
+
 	std::vector<float> color;
 	std::vector<unsigned int> index;
 
@@ -788,10 +786,10 @@ void Mesh::line_initBuffers(const glm::vec3& start, const glm::vec3& end) {
 	}
 
 	{
-		glGenVertexArrays(1, &vao); //--- VAO 를 지정하고 할당하기
+		if (!exist()) glGenVertexArrays(1, &vao); //--- VAO 를 지정하고 할당하기
 		glBindVertexArray(vao); //--- VAO를 바인드하기
 
-		glGenBuffers(2, vbo); //--- 2개의 VBO를 지정하고 할당하기
+		if (!exist()) glGenBuffers(2, vbo); //--- 2개의 VBO를 지정하고 할당하기
 
 		//--- 1번째 VBO를 활성화하여 바인드하고, 버텍스 속성 (좌표값)을 저장
 		glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
@@ -813,12 +811,12 @@ void Mesh::line_initBuffers(const glm::vec3& start, const glm::vec3& end) {
 		//--- attribute 인덱스 1번을 사용 가능하게 함.
 		glEnableVertexAttribArray(1);
 
-		glGenBuffers(1, &ebo); //--- 2개의 VBO를 지정하고 할당하기
+		if (!exist()) 	glGenBuffers(1, &ebo); //--- 2개의 VBO를 지정하고 할당하기
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, index.size() * sizeof(unsigned int), index.data(), GL_STATIC_DRAW);
 
 
 		glBindVertexArray(0); //--- VAO를 바인드하기
 	}
-
+	name = "Line";
 }

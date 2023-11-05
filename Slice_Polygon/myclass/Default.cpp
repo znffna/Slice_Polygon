@@ -38,3 +38,13 @@ glm::vec3 CalculateBezierPoint(float t, const glm::vec3& p0, const glm::vec3& p1
 void print_vec3(const glm::vec3& vector) {
 	std::cout << "{" << vector.x << ", " << vector.y << ", " << vector.z << "} " << '\n';
 }
+
+bool opengl_error() {
+	GLenum error = glGetError();
+	if (error != GL_NO_ERROR) {
+		// 오류 처리 또는 오류 메시지 출력
+		std::cerr << "OpenGL 오류 발생: " << error << std::endl;
+		return true;
+	}
+	return false;
+}
