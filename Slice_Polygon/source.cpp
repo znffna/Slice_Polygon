@@ -205,9 +205,10 @@ GLvoid setup() {
 
 	//카메라 초기화
 	{
-		camera.setPos({ 0.0f, 0.0f, 2.0f });
+		camera.setPos({ 0.0f, 0.0f, 0.5f });
 		camera.setDir({ 0.0f, 0.0f, 0.0f });
 		camera.setUp({ 0.0f, 1.0f, 0.0f });
+		perspective = false;	//직각투영 사용
 	}
 
 	{	//마우스 초기화
@@ -287,6 +288,12 @@ GLvoid drawScene()
 	{
 		if (leftdown) {
 			//mouse.line_initBuffers({ mousex, mousey,0.0f }, { movex, movey, 0.0f });
+			glBindVertexArray(mouse.vao);
+			// 단위행렬 월드변환
+			glm::mat4 matrix{ 1.0f };
+			glUniformMatrix4fv(shader.getUniformLocate("modelTransform"), 1, GL_FALSE, glm::value_ptr(matrix));
+
+			glDrawArrays(GL_LINES, 0, 2);
 
 		}
 	}
@@ -296,16 +303,16 @@ GLvoid drawScene()
 		for (Polygons& o : object) {
 			glBindVertexArray(o.getVao());
 			shader.worldTransform(o);
-			{
-				std::cout << "glm::vec3 크기" << sizeof(glm::vec3)<< '\n';
-				std::cout << "정점 위치 : " << '\n';
-				DebugPrintVBOContents(o.mesh.vbo[0], o.mesh.vertexnum, sizeof(glm::vec3));
-				std::cout << "정점 색깔 : " << '\n';
-				DebugPrintVBOContents(o.mesh.vbo[1], o.mesh.vertexnum, sizeof(glm::vec3));
-				std::cout << "인덱스 배열 : " << '\n';
-				DebugPrintVBOContents(o.mesh.ebo, o.mesh.vertexnum, sizeof(unsigned int));
+			//if(debug){
+			//	std::cout << "glm::vec3 크기" << sizeof(glm::vec3)<< '\n';
+			//	std::cout << "정점 위치 : " << '\n';
+			//	DebugPrintVBOContents(o.mesh.vbo[0], o.mesh.vertexnum, sizeof(glm::vec3));
+			//	std::cout << "정점 색깔 : " << '\n';
+			//	DebugPrintVBOContents(o.mesh.vbo[1], o.mesh.vertexnum, sizeof(glm::vec3));
+			//	std::cout << "인덱스 배열 : " << '\n';
+			//	DebugPrintVBOContents(o.mesh.ebo, o.mesh.vertexnum, sizeof(unsigned int));
 
-			}
+			//}
 
 			for (int i = 0; i < o.mesh.indexnum; i++) {
 				//drawstyle? o.mesh.Fill_Draw(i): o.mesh.LINE_Draw(i);
@@ -403,11 +410,17 @@ GLvoid Mouse(int button, int state, int x, int y) {
 		movex = mx;
 		movey = my;
 
+		mouse.line_initBuffers({mousex, mousey, 0.0f},{movex, movey, 0.0f});
+
 		leftdown = true;
 	}
 	
 	if (button == GLUT_LEFT_BUTTON && state == GLUT_UP) {
-	
+		movex = mx;
+		movey = my;
+
+		slide_polygon();
+
 		leftdown = false;
 	}
 
@@ -417,8 +430,8 @@ GLvoid Mouse(int button, int state, int x, int y) {
 //--- 마우스 드래그 함수
 GLvoid Motion(int x, int y) {
 	//--- 마우스 모션 함수
-	GLfloat mx = (float)x / (window_row / 2.0) - 1.0f;
-	GLfloat my = -((float)y / (window_col / 2.0) - 1.0f);
+	GLfloat mx = static_cast<float>(x) / (window_row / 2.0) - 1.0f;
+	GLfloat my = -(static_cast<float>(y) / (window_col / 2.0) - 1.0f);
 		
 	
 	if (leftdown) {
@@ -428,6 +441,7 @@ GLvoid Motion(int x, int y) {
 		movex = mx;
 		movey = my;
 
+		mouse.line_initBuffers({ mousex, mousey, 0.0f }, { movex, movey, 0.0f });
 
 		glutPostRedisplay();
 		//버텍스 업데이트 필요
@@ -601,6 +615,7 @@ void slide_polygon() {
 
 					first.push_back({ meet_x, get_y(mouse_m, meet_x, mouse_c), 0.0f });
 					second.push_back({ meet_x, get_y(mouse_m, meet_x, mouse_c), 0.0f });
+
 					select_obj = select_obj == true ? false : true;
 					select_obj ? first.push_back(end) : second.push_back(end);
 				}
@@ -613,6 +628,19 @@ void slide_polygon() {
 
 		// flag는 잘렸을 경우 true 반환
 		if (flag) {
+			//if (debug) {
+			{
+				std::cout << "first 정점 --" << '\n';
+				for (glm::vec3& v : first) {
+					print_vec3(v);
+				}
+				std::cout << "second 정점 --" << '\n';
+				for (glm::vec3& v : second) {
+					print_vec3(v);
+				}
+				std::cout << "-------------" << '\n';
+
+			}
 			//해당 버텍스 컬러 사용
 			std::vector<glm::vec3> first_color;
 			std::vector<glm::vec3> second_color;

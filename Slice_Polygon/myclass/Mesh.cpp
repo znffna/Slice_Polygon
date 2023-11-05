@@ -84,7 +84,7 @@ void Mesh::setMesh(const int& mesh, const float& radius) {
 		name = "circle";
 		break;
 	case MESH_TRIANGLE:	case MESH_SQUARE:	case MESH_PENTAGON:	case MESH_HEXAGON:	case MESH_HEPTAGON:	case MESH_OCTAGON:
-		std::cout << "생성되는 도형 : " << mesh - MESH_TRIANGLE + 3 << '\n';
+		//std::cout << "생성되는 도형 : " << mesh - MESH_TRIANGLE + 3 << '\n';
 		polygon(mesh - MESH_TRIANGLE + 3);
 		break;
 	}
@@ -94,9 +94,10 @@ void Mesh::setMesh(const int& mesh, const float& radius) {
 //---세팅된 정보를 삭제
 void Mesh::clear() {
 	if (exist()) {
-		glDeleteBuffers(1, &ebo);
-		glDeleteBuffers(2, vbo);
-		glDeleteVertexArrays(1, &vao);
+		//polygon은 genbuffer를 존재시엔 하지 않음.(덮어쓰기 됨)
+		//glDeleteBuffers(1, &ebo);
+		//glDeleteBuffers(2, vbo);
+		//glDeleteVertexArrays(1, &vao);
 		vertex.clear();
 	}
 	name = "None";
@@ -611,7 +612,7 @@ void Mesh::circle(const float& radius) {
 
 void Mesh::polygon(const int& polygon) {
 	//name = polygon + "각형";
-	std::cout << "생성할 polygon :" << polygon << "\n";
+	//std::cout << "생성할 polygon :" << polygon << "\n";
 	std::vector<float> vertex;
 	std::vector<float> color;
 	std::vector<unsigned int> index;
@@ -641,35 +642,35 @@ void Mesh::polygon(const int& polygon) {
 		}
 		count++;
 	}
-	std::cout << "현재 모든 vector의 내용" << '\n';
-	{
-		int cnt{};
-		std::cout << "vertex ---- " << '\n';
-		for (float& f : vertex) {
-			std::cout << f << ", ";
-			cnt++;
-			if (cnt % 3 == 0) {
-				std::cout << '\n';
-			}
-		}
-		cnt = 0;
-		std::cout << "color ---- " << '\n';
-		for (float& f : color) {
-			std::cout << f << ", ";
-			cnt++;
-			if (cnt % 3 == 0) {
-				std::cout << '\n';
-			}
-		}
-		std::cout << "index ---- " << '\n';
-		for (unsigned int& ui : index) {
-			std::cout << ui << ", ";
-			cnt++;
-			if (cnt % 3 == 0) {
-				std::cout << '\n';
-			}
-		}
-	}
+	//{
+	//	std::cout << "현재 모든 vector의 내용" << '\n';
+	//	int cnt{};
+	//	std::cout << "vertex ---- " << '\n';
+	//	for (float& f : vertex) {
+	//		std::cout << f << ", ";
+	//		cnt++;
+	//		if (cnt % 3 == 0) {
+	//			std::cout << '\n';
+	//		}
+	//	}
+	//	cnt = 0;
+	//	std::cout << "color ---- " << '\n';
+	//	for (float& f : color) {
+	//		std::cout << f << ", ";
+	//		cnt++;
+	//		if (cnt % 3 == 0) {
+	//			std::cout << '\n';
+	//		}
+	//	}
+	//	std::cout << "index ---- " << '\n';
+	//	for (unsigned int& ui : index) {
+	//		std::cout << ui << ", ";
+	//		cnt++;
+	//		if (cnt % 3 == 0) {
+	//			std::cout << '\n';
+	//		}
+	//	}
+	//}
 
 	{
 		if(!exist())
