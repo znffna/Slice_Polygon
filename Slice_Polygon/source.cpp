@@ -48,7 +48,7 @@ Polygons::Polygons() : Object() {
 }
 
 Polygons::~Polygons() {
-
+	time = 0;
 }
 
 void Polygons::reset(const float& polygon) {
@@ -303,7 +303,7 @@ GLvoid drawScene()
 				std::cout << "정점 색깔 : " << '\n';
 				DebugPrintVBOContents(o.mesh.vbo[1], o.mesh.vertexnum, sizeof(glm::vec3));
 				std::cout << "인덱스 배열 : " << '\n';
-				DebugPrintVBOContents(o.mesh.ebo, o.mesh.vertexnum, sizeof(glm::vec3));
+				DebugPrintVBOContents(o.mesh.ebo, o.mesh.vertexnum, sizeof(unsigned int));
 
 			}
 
