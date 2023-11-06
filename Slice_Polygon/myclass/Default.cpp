@@ -1,5 +1,8 @@
 #include "Default.hpp"
 
+float window_row = 800;			//윈도우 크기(가로)
+float window_col = 600;			//윈도우 크기(세로)
+
 void show_vec3(const glm::vec3& vector) {
 	std::cout << "{" << vector.x << ", " << vector.y << ", " << vector.z << "}" << '\n';
 }

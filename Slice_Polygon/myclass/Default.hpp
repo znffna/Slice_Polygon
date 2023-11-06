@@ -1,4 +1,5 @@
 
+#pragma once
 #ifndef DEFAULT_HPP
 #define DEFAULT_HPP
 
@@ -34,10 +35,10 @@ const glm::vec3 rainbow[] = {
 	{0.5f, 0.1f, 0.15f}		//와인
 };
 
-//윈도우 크기 설정
-const float window_row(800);			//윈도우 크기(가로)
-const float window_col(600);			//윈도우 크기(세로)
 
+//윈도우 크기 설정
+extern float window_row;			//윈도우 크기(가로)
+extern float window_col;			//윈도우 크기(세로)
 //error가 있을시 받아서 출력하는 함수.
 bool opengl_error();
 

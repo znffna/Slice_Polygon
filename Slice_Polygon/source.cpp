@@ -86,9 +86,9 @@ void Polygons::move() {
 	translation = CalculateBezierPoint(time, start_point, control_point, end_point);
 
 	//이동하면서 자전하는 값을 키움.
-	float r = start_point.x < 0 ? -5.0f : 5.0f;
-	rotate.z += r;
-	degree_range_normalization(rotate.z);
+	//float r = start_point.x < 0 ? -5.0f : 5.0f;
+	//rotate.z += r;
+	//degree_range_normalization(rotate.z);
 }
 
 
@@ -148,8 +148,8 @@ void Change_switch(bool&);
 
 
 bool move(Polygons& o);
-void slide_polygon();
-
+//void slide_polygon();	//1차 시도(mat3, mat4 오류남)
+void slice_polygon();	//2차 시도
 
 //--------------------------------------------------------
 //--- 실습용 전역변수 선언
@@ -330,6 +330,8 @@ GLvoid drawScene()
 //--- 다시그리기 콜백 함수
 GLvoid Reshape(int w, int h)
 {
+	window_row = w;
+	window_col = h;
 	glViewport(0, 0, w, h);
 }
 
@@ -411,7 +413,9 @@ GLvoid Mouse(int button, int state, int x, int y) {
 		movex = mx;
 		movey = my;
 
-		slide_polygon();
+		//slide_polygon();
+		slice_polygon();
+
 
 		leftdown = false;
 	}
@@ -556,6 +560,194 @@ float get_x(const GLfloat& m, const GLfloat& y, const GLfloat& c) {
 	return (1.0f / m) * (y - c);
 }
 
+bool check_inside(Polygons& polygon) {
+	// 다각형
+	float lp = polygon.translation.x - polygon.scale.x;
+	float bp = polygon.translation.y - polygon.scale.y;
+	float rp = polygon.translation.x + polygon.scale.x;
+	float tp = polygon.translation.y + polygon.scale.y;
+
+	// 마우스
+	float lm = glm::min(mousex, movex);
+	float bm = glm::min(mousey, movey);
+	float rm = glm::max(mousex, movex);
+	float tm = glm::max(mousey, movey);
+
+	// 왼쪽 끝보다 우측끝이 더 왼쪽.
+	if (lp > rm) { std::cout << "폴리곤이 마우스보다 우측에 있음" << '\n'; return false; }
+	// 우측 끝보다 좌측끝이 더 우측.
+	if (rp < lm) { std::cout << "폴리곤이 마우스보다 좌측에 있음" << '\n'; return false; }
+	// 마우스의 상단보다 폴리곤 하단이 더 위
+	if (bp > tm) { std::cout << "폴리곤이 마우스보다 위에 있음" << '\n'; return false; }
+	// 마우스의 하단보다 폴리곤 상단이 더 아래
+	if (tp < bm) { std::cout << "폴리곤이 마우스보다 아래에 있음" << '\n'; return false; }
+
+	return true;
+}
+
+
+void slice_polygon() {
+	int cnt{};
+	for (Polygons& p : object) {
+		std::cout << "p.mesh.vertex.size() : " << p.mesh.vertex.size() << '\n';
+
+		//해당 위치의 AAB 판정에서 안쪽인지? - 미리 빼서 계산비용 절약
+		if (!check_inside(p)) {	
+			cnt++;//도형 1개의 잘림판단 완료.
+			continue;
+		}
+		// 이 아래는 일단 충돌 가능성 있음. - 계산비용 사용
+		std::cout << "ABB에서 걸러지지 않음 vao: " << p.mesh.vao << '\n';
+
+		// 월드 변환을 가져옴.
+		glm::mat4 matrix{ 1.0f };
+		p.World_Transform(matrix);
+
+		// 역행렬도 미리 계산
+		glm::mat4 reverse = glm::inverse(matrix);
+
+		// 마우스 관련 변수 미리 계산.
+		float m_dx{0.0f};
+		float m_m{0.0f};
+		if ((m_dx = movex - mousex)!= 0.0f) {
+			m_m= (movey - mousey) / (movex - mousex);		// dy / dx
+		}
+		float m_c = mousey - m_m * mousex;					// c(y절편)
+
+		// p의 정점위치를 전부 가져옴.
+		std::vector<glm::vec3> p_vertex;
+		//std::vector<glm::vec3> p_color;
+		for (int i = 0; i < p.mesh.vertex.size(); i++) {
+			p_vertex.push_back(p.mesh.vertex[i]);
+			p_vertex[i] = matrix* glm::vec4 { p_vertex[i], 1.0f};
+		}
+
+		// 두개의 polygon 정점들을 저장한 vector 변수 생성
+		std::vector<glm::vec3> first;
+		std::vector<glm::vec3> second;
+		// first와 second 중에 넣을 polygon 선택 변수
+		bool select_first{ true };	//true 일때 first에 넣음.
+
+		// 한번이라도 만나게 된다면 새로운 polygon을 생성해야하니 flag를 생성
+		bool flag{ false };
+
+
+		// 선분 하나하나를 가져와서 마우스 직선과의 비교
+		std::cout << "p_vertex 갯수:" << p_vertex.size() << '\n';
+		for (int i = 0; i < p_vertex.size(); i++) {
+			int next = (i + 1) % p_vertex.size();
+
+			const glm::vec3& start = p_vertex[i];
+			const glm::vec3& end = p_vertex[next];
+
+			//먼저 시작위치를 현재 도형에 넣음.
+			select_first ? first.push_back(start) : second.push_back(start);
+
+			//두 정점간의 직선의 방정식 계산
+			float v_dx = start.x - end.x;
+			float v_m{ 0.0f };
+			if (v_dx != 0.0f) {
+				v_m = (start.y - end.y) / v_dx;
+			}
+			float v_c = start.y - v_m * start.x;
+
+			// 만약 마우스 직선과 같은 기울기를 가진다면 만나지 않음.
+			if ((m_m - v_m) != 0.0f) {
+				// 같은 y값을 가질때의 x값을 구함.
+				float meet_x = (v_c - m_c) / (m_m - v_m);
+
+				// 해당 x값이 정점 두개 사이의 값인지 확인.
+				if (glm::min(start.x, end.x) < meet_x and meet_x < glm::max(start.x, end.x)) {
+					//선분과 직접 만남.
+					flag = true;
+					// 만나는 지점을 두 polygon에 넣음.
+					glm::vec3 meet{ meet_x, (v_m * meet_x + v_c), 0.0f };
+					first.push_back(meet);
+					second.push_back(meet);
+					if (select_first) {
+						select_first = false;
+					}
+					else {
+						select_first = true;
+					}
+				}
+			}		
+		}
+
+		if (flag) {
+			// 새로운 polygon과 현재 polygon의 mesh값 변경
+			std::cout << "flag : TRUE" << p.getVao() << '\n';
+			//first 정점들을 적용 - 현재 잘린 도형의 Mesh 변경
+			p.mesh.vertex.clear();
+			for (const glm::vec3 v : first) {
+				glm::vec3 tmp = v;
+				tmp = reverse * glm::vec4{ tmp, 1.0f};
+				p.mesh.vertex.push_back(tmp);
+			}
+			
+			p.mesh.color.clear();
+			for (int i = 0; i < first.size(); i++) {
+				float x = static_cast<float>(i / 4 % 2);
+				float y = static_cast<float>(i / 2 % 2);
+				float z = static_cast<float>(i % 2);
+				p.mesh.color.push_back(glm::vec3{x, y, z});
+			}
+
+			p.mesh.index.clear();
+			if (first.size() >= 2) {
+				for (int i = 2; i < first.size(); i++) {
+					p.mesh.index.push_back(0);
+					p.mesh.index.push_back(i - 1);
+					p.mesh.index.push_back(i);
+				}
+			}
+			// 적용한 vertex, color, index를 GPU에 보내기.
+			p.mesh.push_GPU();
+
+			//second 정점들을 적용 - 새로운 polygons를 생성
+			object.push_back(Polygons());
+			Polygons& new_p = object[object.size() - 1];	//막 생성한 polygon을 가르킴.
+			{	//새로생긴 polygons의 값을 잘린 도형값으로.
+				new_p.translation = p.translation;
+				new_p.scale = p.scale;
+				new_p.rotate = p.rotate;
+				new_p.start_point = p.start_point;
+				new_p.control_point = p.control_point;
+				new_p.end_point = p.end_point;
+				new_p.time = p.time;
+			}
+			new_p.mesh.vertex.clear();
+			for (const glm::vec3 v : second) {
+				glm::vec3 tmp = v;
+				tmp = reverse * glm::vec4{ tmp, 1.0f };
+				new_p.mesh.vertex.push_back(tmp);
+			}
+
+			new_p.mesh.color.clear();
+			for (int i = 0; i < second.size(); i++) {
+				float x = static_cast<float>(i / 4 % 2);
+				float y = static_cast<float>(i / 2 % 2);
+				float z = static_cast<float>(i % 2);
+				new_p.mesh.color.push_back(glm::vec3{ x, y, z });
+			}
+
+			new_p.mesh.index.clear();
+			if (second.size() >= 2) {
+				for (int i = 2; i < second.size(); i++) {
+					new_p.mesh.index.push_back(0);
+					new_p.mesh.index.push_back(i - 1);
+					new_p.mesh.index.push_back(i);
+				}
+			}
+			// 적용한 vertex, color, index를 GPU에 보내기.
+			new_p.mesh.push_GPU();
+		}
+
+		cnt++;//도형 1개의 잘림판단 완료.
+	}//모든 도형이 끝날시 이 깊이를 빠져나옴.
+
+}
+
 
 void slide_polygon() {
 	//현재 잘린 도형의 정점 갯수(도형 종류)
@@ -569,11 +761,14 @@ void slide_polygon() {
 		//--- 계산시 사용될 정점위치 및 마우스 벡터
 		std::vector<glm::vec3> vertex;
 
-		glm::mat4 matrix{ 1.0f };
-		p.World_Transform(matrix);
+		glm::mat4 w_matrix{ 1.0f };
+		p.World_Transform(w_matrix);
+
+		glm::mat3 matrix = static_cast<glm::mat3> (w_matrix);
+		glm::mat3 reverse = static_cast<glm::mat3> (glm::inverse(w_matrix));
 
 		for (int i = 0; i < p.mesh.vertex.size(); i++) {
-			vertex.push_back((glm::mat3)matrix * p.mesh.vertex.at(i));
+			vertex.push_back(matrix * p.mesh.vertex.at(i));
 		}
 
 		//--- 마우스 직선관련 값 계산
@@ -664,20 +859,15 @@ void slide_polygon() {
 			std::vector<glm::vec3> first_color;
 			std::vector<glm::vec3> second_color;
 
-			//역 월드변환 계산
-			glm::mat4 reverse{ 1.0f };
-			p.World_Transform(reverse);
-			reverse = glm::inverse(reverse);
-
 			//std::cout << "최종 변환한 first 좌표: object 좌표계로 전환한 좌표" << '\n';
 			for (glm::vec3& v : first) {
-				v = (glm::mat3)reverse * v;
+				v = reverse * v;
 			//	print_vec3(v);
 				first_color.push_back(glm::vec3{ 0.5f } * v + 0.5f);
 			}
 			//std::cout << "최종 변환한 second 좌표: object 좌표계로 전환한 좌표" << '\n';
 			for (glm::vec3& v : second) {
-				v = (glm::mat3)reverse * v;
+				v = reverse * v;
 			//	print_vec3(v);
 				second_color.push_back(glm::vec3{ 0.5f } *v + 0.5f);
 			}
@@ -698,10 +888,8 @@ void slide_polygon() {
 				{
 					Mesh& m = p.mesh;
 					m.set_name("잘린 다각형");
-					glGenVertexArrays(1, &m.vao); //--- VAO 를 지정하고 할당하기
+					m.genGPUbuffers();
 					glBindVertexArray(m.vao); //--- VAO를 바인드하기
-
-					glGenBuffers(2, m.vbo); //--- 2개의 VBO를 지정하고 할당하기
 
 					//--- 1번째 VBO를 활성화하여 바인드하고, 버텍스 속성 (좌표값)을 저장
 					glBindBuffer(GL_ARRAY_BUFFER, m.vbo[0]);
@@ -723,7 +911,6 @@ void slide_polygon() {
 					//--- attribute 인덱스 1번을 사용 가능하게 함.
 					glEnableVertexAttribArray(1);
 
-					glGenBuffers(1, &m.ebo); //--- 2개의 VBO를 지정하고 할당하기
 					glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m.ebo);
 					glBufferData(GL_ELEMENT_ARRAY_BUFFER, index.size() * sizeof(unsigned int), index.data(), GL_STATIC_DRAW);
 
@@ -761,11 +948,10 @@ void slide_polygon() {
 				//first 를 현재 도형 p 에 저장
 				{
 					Mesh& m = new_p.mesh;
+					m.genGPUbuffers();
 					m.set_name("잘린 다각형");
-					glGenVertexArrays(1, &m.vao); //--- VAO 를 지정하고 할당하기
 					glBindVertexArray(m.vao); //--- VAO를 바인드하기
 
-					glGenBuffers(2, m.vbo); //--- 2개의 VBO를 지정하고 할당하기
 
 					//--- 1번째 VBO를 활성화하여 바인드하고, 버텍스 속성 (좌표값)을 저장
 					glBindBuffer(GL_ARRAY_BUFFER, m.vbo[0]);
@@ -787,7 +973,6 @@ void slide_polygon() {
 					//--- attribute 인덱스 1번을 사용 가능하게 함.
 					glEnableVertexAttribArray(1);
 
-					glGenBuffers(1, &m.ebo); //--- 2개의 VBO를 지정하고 할당하기
 					glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m.ebo);
 					glBufferData(GL_ELEMENT_ARRAY_BUFFER, index.size() * sizeof(unsigned int), index.data(), GL_STATIC_DRAW);
 

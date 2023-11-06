@@ -35,6 +35,12 @@ private:
 	void circle(const float&);
 	void polygon(const int&);
 	void ReadObj(const char*);
+
+	bool existVao{ false };
+	bool existVbo{ false };
+	bool existEbo{ false };
+
+
 public:
 	//---멤버 변수
 	GLuint vao;
@@ -42,6 +48,9 @@ public:
 	GLuint ebo;
 
 	std::vector<glm::vec3> vertex;	//회전 적용 안하는 기본 정점
+	std::vector<glm::vec3> color;	//회전 적용 안하는 기본 정점
+	std::vector<unsigned int> index;	//회전 적용 안하는 기본 정점
+
 	GLuint vertexnum;	//정점 개수
 	GLuint indexnum;	//인덱스 크기
 	GLuint polygonnum;	//폴리곤 개수(삼각형 개수)
@@ -106,10 +115,18 @@ public:
 
 	~Mesh() {
 		//일단 버그나니까 주석처리
-		//glDeleteBuffers(2, vbo);
-		//glDeleteBuffers(1, &ebo);
-		//glDeleteVertexArrays(1, &vao);
+		delGPUbuffers();
 	}
+	void genVao();
+	void genVbo();
+	void genEbo();
+
+	void delVao();
+	void delVbo();
+	void delEbo();
+
+	void genGPUbuffers();
+	void delGPUbuffers();
 
 	std::string get_name() {
 		return name;
@@ -126,6 +143,7 @@ public:
 
 	void clear();
 	void setMesh(const int&, const float& radius = 10.0f);
+	void push_GPU();
 	bool exist() const;
 
 	std::string getName() const;

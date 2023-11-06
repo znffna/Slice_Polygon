@@ -4,11 +4,15 @@
 //--- 생성자
 Mesh::Mesh() {
 	name = "None";
+
 	vao = 0;
 	for (GLuint& i : vbo) i = 0;
 	ebo = 0;
 
 	vertex.clear();
+	color.clear();
+	index.clear();
+
 	vertexnum = 0;
 	indexnum = 0;
 	polygonnum = 0;
@@ -16,6 +20,88 @@ Mesh::Mesh() {
 	origin_translation = { 0.0f, 0.0f, 0.0f };
 	origin_scale = { 1.0f, 1.0f, 1.0f };
 	polygon_center = nullptr;
+}
+
+//GPU option
+void Mesh::genVao() {
+	if (!existVao) {
+		glGenVertexArrays(1, &vao);
+		existVao = true;
+	}
+}
+void Mesh::delVao() {
+	if (existVao) {
+		glDeleteVertexArrays(1, &vao);
+		existVao = false;
+	}
+}
+
+void Mesh::genVbo() {
+	if (!existVbo) {
+		glGenBuffers(2, vbo);
+		existVbo = true;
+	}
+}
+void Mesh::delVbo() {
+	if (existVbo) {
+		glDeleteBuffers(2, vbo);
+		existVbo = false;
+	}
+}
+
+void Mesh::genEbo() {
+	if (!existEbo) {
+		glGenBuffers(1, &ebo);
+		existEbo = true;
+	}
+}
+void Mesh::delEbo() {
+	if (existEbo) {
+		glDeleteBuffers(1, &ebo);
+		existEbo = false;
+	}
+}
+
+void Mesh::genGPUbuffers() {
+	genVao();
+	genVbo();
+	genEbo();
+}
+void Mesh::delGPUbuffers() {
+	delEbo();
+	delVbo();
+	delVao();
+}
+void Mesh::push_GPU() {
+	{
+		genGPUbuffers();
+		glBindVertexArray(vao); //--- VAO를 바인드하기
+		//--- 1번째 VBO를 활성화하여 바인드하고, 버텍스 속성 (좌표값)을 저장
+		glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
+		//--- 변수 diamond 에서 버텍스 데이터 값을 버퍼에 복사한다.
+		//--- triShape 배열의 사이즈: 9 * float		
+		glBufferData(GL_ARRAY_BUFFER, vertex.size() * sizeof(glm::vec3), vertex.data(), GL_STATIC_DRAW);
+		//--- 좌표값을 attribute 인덱스 0번에 명시한다: 버텍스 당 3* float
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+		//--- attribute 인덱스 0번을 사용가능하게 함
+		glEnableVertexAttribArray(0);
+
+		//--- 2번째 VBO를 활성화 하여 바인드 하고, 버텍스 속성 (색상)을 저장
+		glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
+		//--- 변수 colors에서 버텍스 색상을 복사한다.
+		//--- colors 배열의 사이즈: 9 *float
+		glBufferData(GL_ARRAY_BUFFER, color.size() * sizeof(glm::vec3), color.data(), GL_STATIC_DRAW);
+		//--- 색상값을 attribute 인덱스 1번에 명시한다: 버텍스 당 3*float
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
+		//--- attribute 인덱스 1번을 사용 가능하게 함.
+		glEnableVertexAttribArray(1);
+
+		if(existEbo){
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+			glBufferData(GL_ELEMENT_ARRAY_BUFFER, index.size() * sizeof(unsigned int), index.data(), GL_STATIC_DRAW);
+		}
+		glBindVertexArray(0); //--- VAO를 바인드하기
+	}
 }
 
 //---면을 채워서 출력
@@ -54,9 +140,9 @@ void Mesh::AUTO_Draw(const bool& TRIANGLE) const {
 
 //---mesh에 정보를 세팅
 void Mesh::setMesh(const int& mesh, const float& radius) {
-	if (exist()) {
-		clear();
-	}
+	//if (exist()) {
+	//	clear();
+	//}
 
 	switch (mesh) {
 	case MESH_AXIS:
@@ -239,10 +325,9 @@ void Mesh::ReadObj(const char* filename) {
 	}
 
 	{
-		glGenVertexArrays(1, &vao); //--- VAO 를 지정하고 할당하기
+		genGPUbuffers();
 		glBindVertexArray(vao); //--- VAO를 바인드하기
 
-		glGenBuffers(2, vbo); //--- 2개의 VBO를 지정하고 할당하기
 
 		//--- 1번째 VBO를 활성화하여 바인드하고, 버텍스 속성 (좌표값)을 저장
 		glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
@@ -264,7 +349,6 @@ void Mesh::ReadObj(const char* filename) {
 		//--- attribute 인덱스 1번을 사용 가능하게 함.
 		glEnableVertexAttribArray(1);
 
-		glGenBuffers(1, &ebo); //--- 2개의 VBO를 지정하고 할당하기
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, facenum * sizeof(glm::uvec3), face, GL_STATIC_DRAW);
 
@@ -291,32 +375,6 @@ void Mesh::ReadObj(const char* filename) {
 		delete[] normal;
 		delete[] uv;
 
-
-		/*
-		{	//잘 불러왔는지 확인용 콘솔 출력
-			std::cout << "vertexnum: " << vertexnum << "\n";
-			for (int i = 0; i < vertexnum; i++) {
-				std::cout << "vertex[" << i << "] : (" << vertex[i].x << ", " << vertex[i].y << ", " << vertex[i].z << ") \n";
-			}
-			for (int i = 0; i < vertexnum; i++) {
-				std::cout << "color[" << i << "] : (" << color[i].r << ", " << color[i].g << ", " << color[i].b << ") \n";
-			}
-			std::cout << "facenum: " << facenum << "\n";
-			for (int i = 0; i < facenum; i++) {
-				std::cout << "face[" << i << "] : (" << face[i].x << ", " << face[i].y << ", " << face[i].z << ") \n";
-			}
-			for (int i = 0; i < facenum; i++) {
-				std::cout << "uvdata[" << i << "] : (" << uvdata[i].x << ", " << uvdata[i].y << ", " << uvdata[i].z << ") \n";
-			}
-			for (int i = 0; i < facenum; i++) {
-				std::cout << "normal[" << i << "] : (" << normal[i].x << ", " << normal[i].y << ", " << normal[i].z << ") \n";
-			}
-			std::cout << "uvnum: " << uvnum <<  "\n";
-			for (int i = 0; i < uvnum; i++) {
-				std::cout << "uv[" << i << "] : (" << uv[i].x << ", " << uv[i].y << ") \n";
-			}
-		}
-		*/
 	}
 }
 
@@ -388,10 +446,9 @@ void Mesh::tetrahedron() {
 	vertexnum = 4;
 	indexnum = 4 * 3;
 
-	glGenVertexArrays(1, &vao); //--- VAO 를 지정하고 할당하기
+	genGPUbuffers();
 	glBindVertexArray(vao); //--- VAO를 바인드하기
 
-	glGenBuffers(2, vbo); //--- 2개의 VBO를 지정하고 할당하기
 
 	/*	std::cout << "sizeof(glm::vec3) : " << sizeof(glm::vec3) << '\n';
 		std::cout << "sizeof(vertex) : " << sizeof(vertex) << '\n';
@@ -417,7 +474,6 @@ void Mesh::tetrahedron() {
 	//--- attribute 인덱스 1번을 사용 가능하게 함.
 	glEnableVertexAttribArray(1);
 
-	glGenBuffers(1, &ebo); //--- 2개의 VBO를 지정하고 할당하기
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, 4 * sizeof(glm::uvec3), face, GL_STATIC_DRAW);
 
@@ -453,10 +509,9 @@ void Mesh::axis() {
 
 
 	{
-		glGenVertexArrays(1, &vao); //--- VAO 를 지정하고 할당하기
+		genGPUbuffers();
 		glBindVertexArray(vao); //--- VAO를 바인드하기
 
-		glGenBuffers(2, vbo); //--- 2개의 VBO를 지정하고 할당하기
 
 		//--- 1번째 VBO를 활성화하여 바인드하고, 버텍스 속성 (좌표값)을 저장
 		glBindBuffer(GL_ARRAY_BUFFER,vbo[0]);
@@ -478,7 +533,6 @@ void Mesh::axis() {
 		//--- attribute 인덱스 1번을 사용 가능하게 함.
 		glEnableVertexAttribArray(1);
 
-		glGenBuffers(1, &ebo);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, 6 * sizeof(GLuint), index, GL_STATIC_DRAW);
 
@@ -519,10 +573,9 @@ void Mesh::spiral() {
 
 
 	{
-		glGenVertexArrays(1, &vao); //--- VAO 를 지정하고 할당하기
+		genGPUbuffers();
 		glBindVertexArray(vao); //--- VAO를 바인드하기
 
-		glGenBuffers(2, vbo); //--- 2개의 VBO를 지정하고 할당하기
 
 		//--- 1번째 VBO를 활성화하여 바인드하고, 버텍스 속성 (좌표값)을 저장
 		glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
@@ -577,10 +630,9 @@ void Mesh::circle(const float& radius) {
 
 
 	{
-		glGenVertexArrays(1, &vao); //--- VAO 를 지정하고 할당하기
+		genGPUbuffers();
 		glBindVertexArray(vao); //--- VAO를 바인드하기
 
-		glGenBuffers(2, vbo); //--- 2개의 VBO를 지정하고 할당하기
 
 		//--- 1번째 VBO를 활성화하여 바인드하고, 버텍스 속성 (좌표값)을 저장
 		glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
@@ -613,6 +665,9 @@ void Mesh::circle(const float& radius) {
 void Mesh::polygon(const int& polygon) {
 	//name = polygon + "각형";
 	//std::cout << "생성할 polygon :" << polygon << "\n";
+	vertex.clear();
+	color.clear();
+	index.clear();
 	std::vector<float> vertex;
 	std::vector<float> color;
 	std::vector<unsigned int> index;
@@ -632,6 +687,7 @@ void Mesh::polygon(const int& polygon) {
 		color.push_back(rainbow[count % 8].x);
 		color.push_back(rainbow[count % 8].y);
 		color.push_back(rainbow[count % 8].z);
+		this->color.push_back({ rainbow[count % 8].x, rainbow[count % 8].y, rainbow[count % 8].z });	//x
 		/*color.push_back(random_number(0.0f, 1.0f));
 		color.push_back(random_number(0.0f, 1.0f));
 		color.push_back(random_number(0.0f, 1.0f));*/
@@ -639,46 +695,17 @@ void Mesh::polygon(const int& polygon) {
 			index.push_back(0);
 			index.push_back(count - 1);
 			index.push_back(count);
+			this->index.push_back(0);
+			this->index.push_back(count - 1);
+			this->index.push_back(count);
 		}
 		count++;
 	}
-	//{
-	//	std::cout << "현재 모든 vector의 내용" << '\n';
-	//	int cnt{};
-	//	std::cout << "vertex ---- " << '\n';
-	//	for (float& f : vertex) {
-	//		std::cout << f << ", ";
-	//		cnt++;
-	//		if (cnt % 3 == 0) {
-	//			std::cout << '\n';
-	//		}
-	//	}
-	//	cnt = 0;
-	//	std::cout << "color ---- " << '\n';
-	//	for (float& f : color) {
-	//		std::cout << f << ", ";
-	//		cnt++;
-	//		if (cnt % 3 == 0) {
-	//			std::cout << '\n';
-	//		}
-	//	}
-	//	std::cout << "index ---- " << '\n';
-	//	for (unsigned int& ui : index) {
-	//		std::cout << ui << ", ";
-	//		cnt++;
-	//		if (cnt % 3 == 0) {
-	//			std::cout << '\n';
-	//		}
-	//	}
-	//}
-
+	std::cout << "vertex.size() : "<< this->vertex.size() << '\n';
 	{
-		if(!exist())
-			glGenVertexArrays(1, &vao); //--- VAO 를 지정하고 할당하기
+		genGPUbuffers();
 		glBindVertexArray(vao); //--- VAO를 바인드하기
 
-		if (!exist())
-			glGenBuffers(2, vbo); //--- 2개의 VBO를 지정하고 할당하기
 
 		//--- 1번째 VBO를 활성화하여 바인드하고, 버텍스 속성 (좌표값)을 저장
 		glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
@@ -702,8 +729,6 @@ void Mesh::polygon(const int& polygon) {
 		//--- attribute 인덱스 1번을 사용 가능하게 함.
 		glEnableVertexAttribArray(1);
 
-		if (!exist())
-			glGenBuffers(1, &ebo); //--- 2개의 VBO를 지정하고 할당하기
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, index.size() * sizeof(unsigned int), index.data(), GL_STATIC_DRAW);
 
@@ -713,6 +738,7 @@ void Mesh::polygon(const int& polygon) {
 
 	vertexnum = vertex.size() / 3;
 	indexnum = index.size();
+
 	switch (polygon) {
 	case 3:
 		name = "삼각형";
@@ -786,10 +812,8 @@ void Mesh::line_initBuffers(const glm::vec3& start, const glm::vec3& end) {
 	}
 
 	{
-		if (!exist()) glGenVertexArrays(1, &vao); //--- VAO 를 지정하고 할당하기
+		genGPUbuffers();
 		glBindVertexArray(vao); //--- VAO를 바인드하기
-
-		if (!exist()) glGenBuffers(2, vbo); //--- 2개의 VBO를 지정하고 할당하기
 
 		//--- 1번째 VBO를 활성화하여 바인드하고, 버텍스 속성 (좌표값)을 저장
 		glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
@@ -811,7 +835,6 @@ void Mesh::line_initBuffers(const glm::vec3& start, const glm::vec3& end) {
 		//--- attribute 인덱스 1번을 사용 가능하게 함.
 		glEnableVertexAttribArray(1);
 
-		if (!exist()) 	glGenBuffers(1, &ebo); //--- 2개의 VBO를 지정하고 할당하기
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, index.size() * sizeof(unsigned int), index.data(), GL_STATIC_DRAW);
 
