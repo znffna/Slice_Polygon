@@ -156,6 +156,14 @@ void Shader::worldTransform(const Camera& camera) const {
 
 }
 
+void Shader::worldTransform() const {
+	//--- 출력 옵션
+	glm::mat4 World_transformMatrix(1.0f);
+	//--- modelTransform 변수에 변환 값 적용하기
+	glUniformMatrix4fv(getUniformLocate("modelTransform"), 1, GL_FALSE, glm::value_ptr(World_transformMatrix));
+
+}
+
 //뷰 변환
 void Shader::viewTransform(const Camera& camera) {
 	glm::mat4 view = glm::mat4(1.0f);

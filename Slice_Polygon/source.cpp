@@ -10,8 +10,8 @@
 const char title[] = "Let's Slice Polygon";
 const std::string User_guide[] = {
 "----키보드 명령----",
-"도형의 모드 LINE/FILL : m",
-"경로 출력하기 on/off : r",
+"도형의 모드 LINE/FILL : Press 'd'",
+"경로 출력하기 on/off : Press 'r'",
 "날라오는 속도 변경하기: +/- (빨라지기/느려지기)",
 "프로그램 종료: q",
 //"Paste_here",
@@ -27,6 +27,7 @@ bool debug{ false };	//true 시에만 std::cout 으로 정보 출력
 class Polygons : public Object {
 public:
 
+	float speed{ 0.016f };
 	float time;		//시간 매개변수
 	//std::vector<glm::vec3> vertex;
 
@@ -34,6 +35,9 @@ public:
 	glm::vec3 start_point;
 	glm::vec3 control_point;
 	glm::vec3 end_point;
+
+	// 이동 루트 Mesh 저장
+	Mesh move_route;
 
 	Polygons();
 	~Polygons();
@@ -48,18 +52,22 @@ public:
 	void reset(const float& speed);
 };
 
-Polygons::Polygons() : Object() {	
+// 생성자
+Polygons::Polygons() : Object() {
 	scale = glm::vec3 { 0.1f };
 	time = 0.0f;
 }
 
+// 소멸자
 Polygons::~Polygons() {
 	Object::~Object();
+
 	time = 0;
 }
 
+// 복사 생성자
 Polygons::Polygons(const Polygons& other) : Object(other) {
-	
+	std::cout << "Polygons 복사 생성자 불림." << '\n';
 	time = other.time;
 	//for (const glm::vec3& v : other.vertex) {
 	//	vertex.push_back(v);
@@ -69,11 +77,18 @@ Polygons::Polygons(const Polygons& other) : Object(other) {
 	control_point = other.control_point;
 	end_point = other.end_point;
 
-}
+	// route 복사
+	move_route = other.move_route;
 
+}
+// 복사 할당 연산자
 Polygons& Polygons::operator=(const Polygons& other) {
+	std::cout << "Polygons 복사 할당 연산자 불림." << '\n';
 	if (this != &other) {
 		//vertex.clear();
+		//move_route.vertex.clear();
+		//move_route.color.clear();
+		//move_route.index.clear();
 
 		Object::operator=(other);
 
@@ -85,6 +100,10 @@ Polygons& Polygons::operator=(const Polygons& other) {
 		start_point = other.start_point;
 		control_point = other.control_point;
 		end_point = other.end_point;
+
+		// route 복사
+		move_route = other.move_route;
+
 	}
 	return *this;
 }
@@ -92,6 +111,7 @@ Polygons& Polygons::operator=(const Polygons& other) {
 Polygons::Polygons(Polygons&& other) noexcept : Object(other) {
 	//Object::Object(other);
 
+	std::cout << "Polygons 이동 생성자 불림." << '\n';
 	time = other.time;
 	//for (const glm::vec3& v : other.vertex) {
 	//	vertex.push_back(v);
@@ -100,22 +120,32 @@ Polygons::Polygons(Polygons&& other) noexcept : Object(other) {
 	start_point = other.start_point;
 	control_point = other.control_point;
 	end_point = other.end_point;
+
+	// route 복사
+	move_route = std::move(other.move_route);
+	//move_route.vertex.clear();
+	//move_route.color.clear();
+	//move_route.index.clear();
 }
 
+// 이동 할당 연산자
 Polygons& Polygons::operator=(Polygons&& other) noexcept {
+	std::cout << "Polygons 이동 할당 연산자 불림." << '\n';
 	if (this != &other) {
-		//vertex.clear();
-
 		Object::operator=(other);
 
 		time = other.time;
-	/*	for (const glm::vec3& v : other.vertex) {
+		/*	for (const glm::vec3& v : other.vertex) {
 			vertex.push_back(v);
 		}*/
 
 		start_point = other.start_point;
 		control_point = other.control_point;
 		end_point = other.end_point;
+
+		// route 복사
+		move_route = std::move(other.move_route);
+
 	}
 	return *this;
 }
@@ -137,14 +167,31 @@ void Polygons::reset(const float& polygon) {
 
 	translation = start_point;
 
+	// 이동 경로 생성
+	move_route.delGPUbuffers();
+	move_route.vertex.clear();
+	move_route.color.clear();
+	move_route.index.clear();
+
+
+	float num = (1.0f / speed);
+	for (int i = 0; i < (1.0f / speed); i++) {
+		move_route.vertex.push_back(CalculateBezierPoint((i / num), start_point, control_point, end_point));
+		move_route.color.push_back(glm::vec3{ 0.0f });
+		move_route.index.push_back(i);
+	}
+
+	move_route.push_GPU();
+
 	if (debug) {
 		std::cout << "start_point : "; show_vec3(start_point);
 		std::cout << "control_point : "; show_vec3(control_point);
 		std::cout << "end_point : "; show_vec3(end_point);
+		std::cout << "move_route.indexnum :" << move_route.index.size() << '\n';
+
 	}
 }
 
-float speed{ 0.002f }; 
 //float speed{ 0.016f }; 
 
 
@@ -174,7 +221,6 @@ GLvoid specialKeyboard(int key, int x, int y);		//--- 키보드 특수키 콜백
 GLvoid Timer(int value);	//--- 타이머 콜백 함수
 GLvoid Motion(int x, int y);	//--- 마우스 모션 함수
 GLvoid handleMouseWheel(int wheel, int direction, int x, int y);
-GLvoid Timer(int value);			// 타이머 콜백 함수
 
 //--------------------------------------------------------
 //--- 메인 변수 선언
@@ -380,10 +426,17 @@ GLvoid drawScene()
 				std::cout << "정점 위치" << '\n';
 				DebugPrintVBOContents(o.mesh.vbo[0], o.mesh.vertexnum, sizeof(glm::vec3));
 			}
-			for (int i = 0; i < o.mesh.indexnum; i++) {
-				//drawstyle? o.mesh.Fill_Draw(i): o.mesh.LINE_Draw(i);
-				o.mesh.AUTO_Draw(drawstyle);			
-			}
+			//for (int i = 0; i < o.mesh.indexnum; i++) {
+			//	//drawstyle? o.mesh.Fill_Draw(i): o.mesh.LINE_Draw(i);
+			//	//o.mesh.AUTO_Draw(drawstyle);
+			//}
+			o.mesh.AUTO_Draw(drawstyle);
+
+			shader.worldTransform();	//world 변환 초기화
+
+			glBindVertexArray(o.move_route.vao);
+			int start = static_cast<int>(glm::floor(o.time / o.speed));
+			glDrawElements(GL_LINE_STRIP, o.move_route.index.size() - start, GL_UNSIGNED_INT, (void*)(start * sizeof(unsigned int)));
 		}
 
 		/*std::cout << "오브젝트 출력 시작--------------------------------" << '\n';
@@ -435,15 +488,6 @@ GLvoid Keyboard(unsigned char key, int x, int y) {
 	switch (key) {
 	
 
-	// 은면 제거
-	case 'h': case 'H':	
-		depthcheck = depthcheck == true ? false : true;
-		break;
-	//투영 선택(직각/원근)
-	case 'p': case 'P':	//  옆면 1개씩 번갈아 애니메이션 시작/정지
-		perspective = perspective == false ? true : false;
-		break;
-	//default option
 	case 'd': case 'D':
 		drawstyle = drawstyle == false ? true : false;
 		break;
@@ -588,8 +632,8 @@ GLvoid Timer(int value) { //--- 콜백 함수: 타이머 콜백 함수
 	//도형 생성 관련
 	if (gen_time == 59) {
 		object.push_back(Polygons());
-		//object.at(object.size() - 1).reset(random_number(MESH_TRIANGLE, MESH_OCTAGON));
-		object.at(object.size() - 1).reset(MESH_TRIANGLE);
+		object.at(object.size() - 1).reset(random_number(MESH_TRIANGLE, MESH_OCTAGON));
+		//object.at(object.size() - 1).reset(MESH_TRIANGLE);
 
 		if (debug) {
 			std::cout << "object에 현재 도형 갯수 :" << object.size() << '\n';

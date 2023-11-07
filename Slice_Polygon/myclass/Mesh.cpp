@@ -23,6 +23,7 @@ Mesh::Mesh() {
 }
 //복사 생성자
 Mesh::Mesh(const Mesh& other) {
+	std::cout << "mesh복사 생성자 불림" << '\n';
 	for (const glm::vec3& v : other.vertex) {
 		vertex.push_back(v);
 	}
@@ -116,6 +117,13 @@ Mesh::Mesh(Mesh&& other) noexcept {
 //이동 할당 생성자
 Mesh& Mesh::operator=(Mesh&& other) noexcept {
 	if (this != &other) {
+		delGPUbuffers();
+		vertex.clear();
+		color.clear();
+		index.clear();
+
+
+
 		for (const glm::vec3& v : other.vertex) {
 			vertex.push_back(v);
 		}

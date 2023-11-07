@@ -24,6 +24,7 @@ public:
 
 	void setColor(const glm::vec3&, const char*) const;
 
+	void worldTransform() const;
 	void worldTransform(const Object&);
 	void worldTransform(const Camera& camera) const;
 	void viewTransform(const Camera&);
