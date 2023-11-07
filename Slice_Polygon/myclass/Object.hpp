@@ -34,8 +34,18 @@ public:
 	int depth;
 	//---멤버 함수
 	
+	//--- 특수한 상황 
 	Object();	//생성자
 	~Object();
+
+	Object(const Object& other);
+	Object& operator=(const Object& other);
+
+	Object(Object&& other) noexcept;
+	Object& operator=(Object&& other) noexcept;
+	//---
+
+
 	//Object 설정 초기화
 	void changemesh(const int& number);
 	void reset();

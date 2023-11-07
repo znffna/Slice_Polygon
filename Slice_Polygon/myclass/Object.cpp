@@ -13,11 +13,92 @@ Object::Object() {
 
 	own_point = { 0.0f ,0.0f, 0.0f };
 }
+// 복사 생성자
+Object::Object(const Object& other) {
+	radius = other.radius;
+	after_translation = other.after_translation;
+	after_rotate = other.after_rotate;
+	after_scale = other.after_scale;
 
+	after_rotate_origin = other.after_rotate_origin;
+
+	translation = other.translation;
+	rotate = other.rotate;
+	scale = other.scale;
+	own_point = other.own_point;
+
+	mesh = other.mesh;
+
+	t = other.t;
+	depth = other.depth;
+}
+// 복사 할당 연산자
+Object& Object::operator=(const Object& other) {
+	if (this != &other) {
+		radius = other.radius;
+		after_translation = other.after_translation;
+		after_rotate = other.after_rotate;
+		after_scale = other.after_scale;
+
+		after_rotate_origin = other.after_rotate_origin;
+
+		translation = other.translation;
+		rotate = other.rotate;
+		scale = other.scale;
+		own_point = other.own_point;
+
+		mesh = other.mesh;
+
+		t = other.t;
+		depth = other.depth;
+	}
+	return *this;
+}
+// 이동 생성자
+Object::Object(Object&& other) noexcept {
+	radius = other.radius;
+	after_translation = other.after_translation;
+	after_rotate = other.after_rotate;
+	after_scale = other.after_scale;
+
+	after_rotate_origin = other.after_rotate_origin;
+
+	translation = other.translation;
+	rotate = other.rotate;
+	scale = other.scale;
+	own_point = other.own_point;
+
+	mesh = std::move(other.mesh);
+
+	t = other.t;
+	depth = other.depth;
+}
+// 이동 할당 연산자
+Object& Object::operator=(Object&& other) noexcept {
+	if (this != &other) {
+		radius = other.radius;
+		after_translation = other.after_translation;
+		after_rotate = other.after_rotate;
+		after_scale = other.after_scale;
+
+		after_rotate_origin = other.after_rotate_origin;
+
+		translation = other.translation;
+		rotate = other.rotate;
+		scale = other.scale;
+		own_point = other.own_point;
+
+		mesh = std::move(other.mesh);
+
+		t = other.t;
+		depth = other.depth;
+	}
+	return *this;
+}
+// 소멸자
 Object::~Object() {
 
 }
-
 //Object 설정 초기화
 
 

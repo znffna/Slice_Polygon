@@ -38,6 +38,12 @@ public:
 	Polygons();
 	~Polygons();
 
+	Polygons(const Polygons& other);
+	Polygons& operator=(const Polygons& other);
+
+	Polygons(Polygons&& other) noexcept;
+	Polygons& operator=(Polygons&& other) noexcept;
+
 	void move();
 	void reset(const float& speed);
 };
@@ -48,8 +54,72 @@ Polygons::Polygons() : Object() {
 }
 
 Polygons::~Polygons() {
+	Object::~Object();
 	time = 0;
 }
+
+Polygons::Polygons(const Polygons& other) : Object(other) {
+	
+	time = other.time;
+	for (const glm::vec3& v : other.vertex) {
+		vertex.push_back(v);
+	}
+
+	start_point = other.start_point;
+	control_point = other.control_point;
+	end_point = other.end_point;
+
+}
+
+Polygons& Polygons::operator=(const Polygons& other) {
+	if (this != &other) {
+		vertex.clear();
+
+		Object::operator=(other);
+
+		time = other.time;
+		for (const glm::vec3& v : other.vertex) {
+			vertex.push_back(v);
+		}
+
+		start_point = other.start_point;
+		control_point = other.control_point;
+		end_point = other.end_point;
+	}
+	return *this;
+}
+// 이동 생성자
+Polygons::Polygons(Polygons&& other) noexcept : Object(other) {
+	//Object::Object(other);
+
+	time = other.time;
+	for (const glm::vec3& v : other.vertex) {
+		vertex.push_back(v);
+	}
+
+	start_point = other.start_point;
+	control_point = other.control_point;
+	end_point = other.end_point;
+}
+
+Polygons& Polygons::operator=(Polygons&& other) noexcept {
+	if (this != &other) {
+		vertex.clear();
+
+		Object::operator=(other);
+
+		time = other.time;
+		for (const glm::vec3& v : other.vertex) {
+			vertex.push_back(v);
+		}
+
+		start_point = other.start_point;
+		control_point = other.control_point;
+		end_point = other.end_point;
+	}
+	return *this;
+}
+
 
 void Polygons::reset(const float& polygon) {
 	Object::reset(polygon);
@@ -180,7 +250,7 @@ void main(int argc, char** argv) //--- 윈도우 출력하고 콜백함수 설�
 	mouse.line_initBuffers({mousex, mousey, 0.0f},{movex, movey, 0.0f});
 
 	//키보드 조작 명령어 출력
-	for (std::string s : User_guide) {
+	for (const std::string& s : User_guide) {
 		std::cout << s << '\n';
 	}
 
@@ -464,19 +534,9 @@ GLvoid handleMouseWheel(int wheel, int direction, int x, int y) {
 
 //--- 타이머 콜백 함수
 GLvoid Timer(int value) { //--- 콜백 함수: 타이머 콜백 함수
-
-	//도형 생성 관련
 	static int gen_time{ 0 };
-	if (gen_time == 59) {
-		object.push_back(Polygons());
-		object.at(object.size() - 1).reset(random_number(MESH_TRIANGLE, MESH_OCTAGON));
 
-		if (debug) {
-			std::cout << "object에 현재 도형 갯수 :" << object.size() << '\n';
-		}
-		std::cout << "object에 현재 도형 갯수 :" << object.size() << '\n';
-		std::cout << "object의 vao 넘버:" << object.at(object.size() - 1).mesh.vao << '\n';
-	}
+	
 
 	// 도형 삭제 관련 
 	int index{0};
@@ -496,6 +556,18 @@ GLvoid Timer(int value) { //--- 콜백 함수: 타이머 콜백 함수
 		if (debug) {
 			std::cout << *it << "삭제된 후 object에 현재 도형 갯수 :" << object.size() << '\n';
 		}
+	}
+
+	//도형 생성 관련
+	if (gen_time == 59) {
+		object.push_back(Polygons());
+		object.at(object.size() - 1).reset(random_number(MESH_TRIANGLE, MESH_OCTAGON));
+
+		if (debug) {
+			std::cout << "object에 현재 도형 갯수 :" << object.size() << '\n';
+		}
+		std::cout << "object에 현재 도형 갯수 :" << object.size() << '\n';
+		std::cout << "object의 vao 넘버:" << object.at(object.size() - 1).mesh.vao << '\n';
 	}
 
 
@@ -704,10 +776,15 @@ void slice_polygon() {
 			// 적용한 vertex, color, index를 GPU에 보내기.
 			p.mesh.push_GPU();
 
+
 			//second 정점들을 적용 - 새로운 polygons를 생성
+
 			object.push_back(Polygons());
-			Polygons& new_p = object[object.size() - 1];	//막 생성한 polygon을 가르킴.
-			{	//새로생긴 polygons의 값을 잘린 도형값으로.
+
+			Polygons& new_p = object.at(object.size() - 1);	//막 생성한 polygon을 가르킴.			
+			{
+				new_p.reset(-1);
+				//새로생긴 polygons의 값을 잘린 도형값으로.
 				new_p.translation = p.translation;
 				new_p.scale = p.scale;
 				new_p.rotate = p.rotate;

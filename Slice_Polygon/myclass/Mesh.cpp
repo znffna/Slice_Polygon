@@ -21,6 +21,149 @@ Mesh::Mesh() {
 	origin_scale = { 1.0f, 1.0f, 1.0f };
 	polygon_center = nullptr;
 }
+//복사 생성자
+Mesh::Mesh(const Mesh& other) {
+	for (const glm::vec3& v : other.vertex) {
+		vertex.push_back(v);
+	}
+	for (const glm::vec3& v : other.color) {
+		color.push_back(v);
+	}
+	for (const unsigned int& i : other.index) {
+		index.push_back(i);
+	}
+	push_GPU();
+
+	name = other.name;
+	vertexnum = other.vertex.size();
+	indexnum = other.index.size();
+	polygonnum = other.index.size();
+
+	origin_translation = other.origin_translation;
+	origin_scale = other.origin_scale;
+}
+//복사 할당 연산자
+Mesh& Mesh::operator=(const Mesh& other) {
+	if (this != &other) {
+		//기존에 가지고 있던 GPU랑 vector 초기화
+		delGPUbuffers();
+		vertex.clear();
+		color.clear();
+		index.clear();
+
+		// 깊은 복사 진행
+		for (const glm::vec3& v : other.vertex) {
+			vertex.push_back(v);
+		}
+		for (const glm::vec3& v : other.color) {
+			color.push_back(v);
+		}
+		for (const unsigned int& i : other.index) {
+			index.push_back(i);
+		}
+		push_GPU();
+
+		name = other.name;
+		vertexnum = other.vertex.size();
+		indexnum = other.index.size();
+		polygonnum = other.index.size();
+
+		origin_translation = other.origin_translation;
+		origin_scale = other.origin_scale;
+	}
+	return *this;
+}
+//이동 생성자
+Mesh::Mesh(Mesh&& other) noexcept {
+	for (const glm::vec3& v : other.vertex) {
+		vertex.push_back(v);
+	}
+	for (const glm::vec3& v : other.color) {
+		color.push_back(v);
+	}
+	for (const unsigned int& i : other.index) {
+		index.push_back(i);
+	}
+	// 얇은 복사 진행
+	vao = other.vao;
+	vbo[0] = other.vbo[0];
+	vbo[1] = other.vbo[1];
+	ebo = other.ebo;
+
+	name = other.name;
+	vertexnum = other.vertex.size();
+	indexnum = other.index.size();
+	polygonnum = other.index.size();
+
+	origin_translation = other.origin_translation;
+	origin_scale = other.origin_scale;
+
+	// 이제 기존에 있던것들을 제거
+	other.vertex.clear();
+	other.color.clear();
+	other.index.clear();
+	other.vertexnum = 0;
+	other.indexnum = 0;
+	other.polygonnum = 0;
+	other.existVao = false;
+	other.existVbo = false;
+	other.existEbo = false;
+	other.vao = -1;
+	other.vbo[0] = -1;
+	other.vbo[1] = -1;
+	other.ebo = -1;
+}
+//이동 할당 생성자
+Mesh& Mesh::operator=(Mesh&& other) noexcept {
+	if (this != &other) {
+		for (const glm::vec3& v : other.vertex) {
+			vertex.push_back(v);
+		}
+		for (const glm::vec3& v : other.color) {
+			color.push_back(v);
+		}
+		for (const unsigned int& i : other.index) {
+			index.push_back(i);
+		}
+		// 얇은 복사 진행
+		vao = other.vao;
+		vbo[0] = other.vbo[0];
+		vbo[1] = other.vbo[1];
+		ebo = other.ebo;
+
+		name = other.name;
+		vertexnum = other.vertex.size();
+		indexnum = other.index.size();
+		polygonnum = other.index.size();
+
+		origin_translation = other.origin_translation;
+		origin_scale = other.origin_scale;
+
+		// 이제 기존에 있던것들을 제거
+		other.vertex.clear();
+		other.color.clear();
+		other.index.clear();
+		other.vertexnum = 0;
+		other.indexnum = 0;
+		other.polygonnum = 0;
+		other.existVao = false;
+		other.existVbo = false;
+		other.existEbo = false;
+		other.vao = -1;
+		other.vbo[0] = -1;
+		other.vbo[1] = -1;
+		other.ebo = -1;
+	}
+	return *this;
+}
+//소멸자
+Mesh::~Mesh() {
+	//일단 버그나니까 주석처리
+	delGPUbuffers();
+	vertex.clear();
+	color.clear();
+	index.clear();
+}
 
 //GPU option
 void Mesh::genVao() {
