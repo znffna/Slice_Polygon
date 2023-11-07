@@ -821,13 +821,18 @@ void slice_polygon() {
 					p.mesh.index.push_back(i);
 				}
 			}
-			// 적용한 vertex, color, index를 GPU에 보내기.
+			//TODO 적용한 vertex, color, index를 GPU에 보내기.
 			p.mesh.push_GPU();
 			
 			p.mesh.indexnum = p.mesh.index.size();
 			p.mesh.polygonnum = p.mesh.index.size() / 3;
 			p.mesh.vertexnum = p.mesh.vertex.size();
-
+			// 잘린 도형에 새로운 route를 넣어주어야함.
+			{
+				p.start_point = p.start_point;
+				p.control_point = p.control_point;
+				p.end_point = p.end_point;
+			}
 			//second 정점들을 적용 - 새로운 polygons를 생성
 
 			object.push_back(Polygons());
@@ -874,6 +879,13 @@ void slice_polygon() {
 			new_p.mesh.indexnum = new_p.mesh.index.size();
 			new_p.mesh.polygonnum = new_p.mesh.index.size() / 3;
 			new_p.mesh.vertexnum = new_p.mesh.vertex.size();
+
+			//TODO 잘린 도형에 새로운 route를 넣어주어야함.
+			{
+				p.start_point = p.start_point;
+				p.control_point = p.control_point;
+				p.end_point = p.end_point;
+			}
 		}
 
 		cnt++;//도형 1개의 잘림판단 완료.
