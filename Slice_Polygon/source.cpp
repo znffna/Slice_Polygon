@@ -771,16 +771,18 @@ void slice_polygon() {
 			if ((m_m - v_m) != 0.0f) {
 				// 같은 y값을 가질때의 x값을 구함.
 				float meet_x = (v_c - m_c) / (m_m - v_m);
-
+				float meet_y = (v_m * meet_x + v_c);
 				// 해당 x값이 정점 두개 사이의 값인지 확인.
-				bool v_line = glm::min(start.x, end.x) <= meet_x and meet_x <= glm::max(start.x, end.x);
-				bool m_line = glm::min(mousex, movex) <= meet_x and meet_x <= glm::max(mousex, movex);
+				bool v_inline_x = glm::min(start.x, end.x) <= meet_x and meet_x <= glm::max(start.x, end.x);
+				bool m_inline_x = glm::min(mousex, movex) <= meet_x and meet_x <= glm::max(mousex, movex);
+				bool v_inline_y = glm::min(start.y, end.y) <= meet_y and meet_y <= glm::max(start.y, end.y);
+				bool m_inline_y = glm::min(mousey, movey) <= meet_y and meet_y <= glm::max(mousey, movey);
 
-				if (v_line and m_line) {
+				if (v_inline_x and m_inline_x and v_inline_y and m_inline_y) {
 					//선분과 직접 만남.
 					flag += 1;
 					// 만나는 지점을 두 polygon에 넣음.
-					glm::vec3 meet{ meet_x, (v_m * meet_x + v_c), 0.0f };
+					glm::vec3 meet{ meet_x, meet_y, 0.0f };
 					first.push_back(meet);
 					second.push_back(meet);
 					if (select_first) {
@@ -793,9 +795,8 @@ void slice_polygon() {
 			}		
 		}
 
-		if (flag >= 2) {
-			// 새로운 polygon과 현재 polygon의 mesh값 변경
-			std::cout << "flag : TRUE, vao:" << p.getVao() << '\n';
+		if (flag >= 2) {// 새로운 polygon과 현재 polygon의 mesh값 변경			
+			if(debug) std::cout << "flag : TRUE, vao:" << p.getVao() << '\n';
 			//first 정점들을 적용 - 현재 잘린 도형의 Mesh 변경
 			p.mesh.vertex.clear();
 			for (const glm::vec3 v : first) {
@@ -805,10 +806,10 @@ void slice_polygon() {
 			}
 			
 			p.mesh.color.clear();
-			for (int i = 0; i < first.size(); i++) {
-				float x = static_cast<float>(i / 4 % 2);
+			for (int i = 1; i < first.size() + 1; i++) {
+				float x = static_cast<float>(i % 2);
 				float y = static_cast<float>(i / 2 % 2);
-				float z = static_cast<float>(i % 2);
+				float z = static_cast<float>(i / 4 % 2);
 				p.mesh.color.push_back(glm::vec3{x, y, z});
 			}
 
@@ -826,8 +827,6 @@ void slice_polygon() {
 			p.mesh.indexnum = p.mesh.index.size();
 			p.mesh.polygonnum = p.mesh.index.size() / 3;
 			p.mesh.vertexnum = p.mesh.vertex.size();
-
-			std::cout << "first 작업후 mesh 상태 출력 :" << p.mesh.vao << '\n';
 
 			//second 정점들을 적용 - 새로운 polygons를 생성
 
@@ -854,10 +853,10 @@ void slice_polygon() {
 			}
 
 			new_p.mesh.color.clear();
-			for (int i = 0; i < second.size(); i++) {
-				float x = static_cast<float>(i / 4 % 2);
+			for (int i = 1; i < second.size() + 1; i++) {
+				float x = static_cast<float>(i % 2);
 				float y = static_cast<float>(i / 2 % 2);
-				float z = static_cast<float>(i % 2);
+				float z = static_cast<float>(i / 4 % 2);
 				new_p.mesh.color.push_back(glm::vec3{ x, y, z });
 			}
 
