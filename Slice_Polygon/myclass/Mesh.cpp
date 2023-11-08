@@ -852,7 +852,6 @@ void Mesh::polygon(const int& polygon) {
 		}
 		count++;
 	}
-	std::cout << "vertex.size() : "<< this->vertex.size() << '\n';
 	{
 		genGPUbuffers();
 		glBindVertexArray(vao); //--- VAO를 바인드하기

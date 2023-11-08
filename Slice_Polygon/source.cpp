@@ -202,9 +202,9 @@ void Polygons::move() {
 	translation = CalculateBezierPoint(time, start_point, control_point, end_point);
 
 	//이동하면서 자전하는 값을 키움.
-	//float r = start_point.x < 0 ? -5.0f : 5.0f;
-	//rotate.z += r;
-	//degree_range_normalization(rotate.z);
+	float r = start_point.x < 0 ? -5.0f : 5.0f;
+	rotate.z += r;
+	degree_range_normalization(rotate.z);
 }
 
 void Polygons::set_route() {
@@ -508,6 +508,24 @@ GLvoid Reshape(int w, int h)
 GLvoid Keyboard(unsigned char key, int x, int y) {
 	//std::cout << key << "가 눌림" << std::endl;	
 	switch (key) {
+	case '+':
+		instance_speed += 0.005f;
+		instance_speed = glm::clamp(instance_speed, 0.002f, 0.2f);
+		for (Polygons& p : object) {
+			p.speed += 0.005f;
+			p.speed = glm::clamp(p.speed, 0.002f, 0.05f);
+		}
+		std::cout << "instance_speed increase=" << instance_speed << '\n';
+		break;
+	case '-':
+		instance_speed -= 0.005f;
+		instance_speed = glm::clamp(instance_speed, 0.002f, 0.05f);
+		for (Polygons& p : object) {
+			p.speed -= 0.005f;
+			p.speed = glm::clamp(p.speed, 0.002f, 0.2f);
+		}
+		std::cout << "instance_speed decrease=" << instance_speed << '\n';
+		break;
 	case 'r': case 'R':
 		draw_route = draw_route == false ? true : false;
 		break;
@@ -660,9 +678,9 @@ GLvoid Timer(int value) { //--- 콜백 함수: 타이머 콜백 함수
 
 		if (debug) {
 			std::cout << "object에 현재 도형 갯수 :" << object.size() << '\n';
+			std::cout << "object의 vao 넘버:" << object.at(object.size() - 1).mesh.vao << '\n';
 		}
-		std::cout << "object에 현재 도형 갯수 :" << object.size() << '\n';
-		std::cout << "object의 vao 넘버:" << object.at(object.size() - 1).mesh.vao << '\n';
+		
 	}
 
 
@@ -917,7 +935,7 @@ void slice_polygon() {
 			p.mesh.vertexnum = p.mesh.vertex.size();
 			//TODO  잘린 도형에 새로운 route를 넣어주어야함.
 			{
-				p.speed *= 2.0f;
+				//p.speed *= 2.0f;
 				p.start_point = center_first;
 				p.translation = center_first;
 
