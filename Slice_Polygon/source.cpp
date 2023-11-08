@@ -786,8 +786,6 @@ void slice_polygon() {
 		glm::mat4 matrix{ 1.0f };
 		p.World_Transform(matrix);
 
-		// 역행렬도 미리 계산
-		glm::mat4 reverse = glm::inverse(matrix);
 
 		// 마우스 관련 변수 미리 계산.
 		float m_dx{0.0f};
@@ -864,10 +862,30 @@ void slice_polygon() {
 
 		if (flag >= 2) {// 새로운 polygon과 현재 polygon의 mesh값 변경			
 			if(debug) std::cout << "flag : TRUE, vao:" << p.getVao() << '\n';
+
+			glm::vec3 now_translation = p.translation;
+
+			// 역행렬도 미리 계산
+			glm::mat4 reverse = glm::inverse(matrix);
+			
+
+			//새로 생길 도형의 중심점을 갱신
+			glm::vec3 center_first{ 0.0f };
+
+			for (const glm::vec3& v : first) {
+				center_first += v;
+			}
+			center_first /= glm::vec3{ static_cast<float>(first.size()) };
+
+			glm::vec3 now_to_new = center_first - p.translation;	// 현재 중앙점 -> 새 중앙점
+			p.translation += now_to_new;	// 현재 위치를 새 중앙점 위치로 변경
+
 			//first 정점들을 적용 - 현재 잘린 도형의 Mesh 변경
+
 			p.mesh.vertex.clear();
 			for (const glm::vec3 v : first) {
 				glm::vec3 tmp = v;
+				tmp -= now_to_new;
 				tmp = reverse * glm::vec4{ tmp, 1.0f};
 				p.mesh.vertex.push_back(tmp);
 			}
@@ -888,6 +906,9 @@ void slice_polygon() {
 					p.mesh.index.push_back(i);
 				}
 			}
+
+
+
 			//적용한 vertex, color, index를 GPU에 보내기.
 			p.mesh.push_GPU();
 			
@@ -896,20 +917,17 @@ void slice_polygon() {
 			p.mesh.vertexnum = p.mesh.vertex.size();
 			//TODO  잘린 도형에 새로운 route를 넣어주어야함.
 			{
-				p.speed /= 1.3f;
+				p.speed *= 2.0f;
+				p.start_point = center_first;
+				p.translation = center_first;
 
-				glm::vec3 center{ 0.0f };
+				float x_Value = center_first.x < now_translation.x ? -0.1f : 0.1f;				
+				p.control_point = p.start_point + glm::vec3{ x_Value, 0.1f, 0.0f };
 
-				for (const glm::vec3& v : first) {
-					center += v;
-				}
-				center /= glm::vec3{ static_cast<float>(first.size()) };
+				p.end_point = p.control_point + glm::vec3{ x_Value,-0.0f, 0.0f };
+				p.end_point.y = -1.0f - p.scale.y;
 
-				p.start_point = center;
-				p.translation = center;
-
-				p.control_point = p.control_point;
-				p.end_point = p.end_point;
+				p.time = 0.0f;				
 
 				p.set_route();
 			}
@@ -930,9 +948,22 @@ void slice_polygon() {
 				new_p.end_point = origin_p.end_point;
 				new_p.time = origin_p.time;
 			}
+			//새로 생길 도형의 중심점을 갱신
+			glm::vec3 center_second{ 0.0f };
+
+			for (const glm::vec3& v : second) {
+				center_second += v;
+			}
+			center_second /= glm::vec3{ static_cast<float>(second.size()) };
+
+			glm::vec3 brand_new = center_second - new_p.translation;	// 현재 중앙점 -> 새 중앙점
+			new_p.translation += brand_new;	// 현재 위치를 새 중앙점 위치로 변경
+
+
 			new_p.mesh.vertex.clear();
 			for (const glm::vec3 v : second) {
 				glm::vec3 tmp = v;
+				tmp -= brand_new;
 				tmp = reverse * glm::vec4{ tmp, 1.0f };
 				new_p.mesh.vertex.push_back(tmp);
 			}
@@ -962,18 +993,17 @@ void slice_polygon() {
 
 			//TODO 잘린 도형에 새로운 route를 넣어주어야함.
 			{
-				glm::vec3 center{ 0.0f };
+				new_p.speed = origin_p.speed;
+				new_p.start_point = center_second;
+				new_p.translation = center_second;
 
-				for (const glm::vec3& v : second) {
-					center += v;
-				}
-				center /= glm::vec3{ static_cast<float>(second.size()) };
-				
-				new_p.start_point = center;
-				new_p.translation = center;
-				new_p.control_point = new_p.control_point;
-				new_p.end_point = new_p.end_point;
+				float x_Value = center_second.x < now_translation.x ? -0.1f : 0.1f;
+				new_p.control_point = new_p.start_point + glm::vec3{ x_Value, 0.1f, 0.0f };
 
+				new_p.end_point = new_p.control_point + glm::vec3{ x_Value,-0.0f, 0.0f };
+				new_p.end_point.y = -1.0f - new_p.scale.y;
+
+				new_p.time = 0.0f;
 				new_p.set_route();
 			}
 		}
