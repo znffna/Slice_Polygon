@@ -88,10 +88,13 @@ public:
 
 	//각 과제마다 쓰는 임시 method
 	void setPoint(const glm::vec3&);
+	bool Collision(const Object& other) const ;
 
 	//World Transform 적용 함수
 	void World_Transform(glm::mat4&) const;
 	const GLuint& getVao() const;
+
+
 };
 
 class Axis : public Object {

@@ -26,10 +26,12 @@ bool debug{ false };	//true 시에만 std::cout 으로 정보 출력
 
 class Polygons : public Object {
 public:
-
+	// 이동 관련 변수
 	float speed{ 0.016f };
-	float time;		//시간 매개변수
-	//std::vector<glm::vec3> vertex;
+	float time;		
+	glm::vec3 color;
+	bool move_way{ false };	 // true : 중력작용, false : 베지어 곡선
+	bool is_sliced{ false };
 
 	//2차 베지어 곡선 (이동 루트)
 	glm::vec3 start_point;
@@ -39,6 +41,7 @@ public:
 	// 이동 루트 Mesh 저장
 	Mesh move_route;
 
+	// Special Function
 	Polygons();
 	~Polygons();
 
@@ -48,7 +51,8 @@ public:
 	Polygons(Polygons&& other) noexcept;
 	Polygons& operator=(Polygons&& other) noexcept;
 
-	void move();
+	// Method
+	bool move();
 	void reset(const float& speed);
 
 	void set_route();
@@ -58,6 +62,7 @@ public:
 Polygons::Polygons() : Object() {
 	scale = glm::vec3 { 0.1f };
 	time = 0.0f;
+	color = { random_number(0.0f, 1.0f), random_number(0.0f, 1.0f), random_number(0.0f, 1.0f) };
 }
 
 // 소멸자
@@ -70,10 +75,14 @@ Polygons::~Polygons() {
 // 복사 생성자
 Polygons::Polygons(const Polygons& other) : Object(other) {
 	//std::cout << "Polygons 복사 생성자 불림." << '\n';
-	time = other.time;
+
 	//for (const glm::vec3& v : other.vertex) {
 	//	vertex.push_back(v);
 	//}
+	speed = other.speed;
+	time = other.time;
+	color = other.color;
+	is_sliced = other.is_sliced;
 
 	start_point = other.start_point;
 	control_point = other.control_point;
@@ -94,7 +103,10 @@ Polygons& Polygons::operator=(const Polygons& other) {
 
 		Object::operator=(other);
 
+		speed = other.speed;
 		time = other.time;
+		color = other.color;
+		is_sliced = other.is_sliced;
 		//for (const glm::vec3& v : other.vertex) {
 		//	vertex.push_back(v);
 		//}
@@ -114,7 +126,10 @@ Polygons::Polygons(Polygons&& other) noexcept : Object(other) {
 	//Object::Object(other);
 
 	//std::cout << "Polygons 이동 생성자 불림." << '\n';
+	speed = other.speed;
 	time = other.time;
+	color = other.color;
+	is_sliced = other.is_sliced;
 
 	start_point = other.start_point;
 	control_point = other.control_point;
@@ -132,7 +147,10 @@ Polygons& Polygons::operator=(Polygons&& other) noexcept {
 	if (this != &other) {
 		Object::operator=(other);
 
+		speed = other.speed;
 		time = other.time;
+		color = other.color;
+		is_sliced = other.is_sliced;
 		/*	for (const glm::vec3& v : other.vertex) {
 			vertex.push_back(v);
 		}*/
@@ -193,18 +211,29 @@ void Polygons::reset(const float& polygon) {
 
 //float speed{ 0.016f }; 
 
+Object basket; // 바구니
 
-void Polygons::move() {
+bool Polygons::move() {
 	//현재 t를 증가시킴.
 	time += speed;
 
 	//t에 맞는 베지어 곡선 위치를 대입함.
 	translation = CalculateBezierPoint(time, start_point, control_point, end_point);
+	if (is_sliced and Collision(basket) and translation.y > basket.translation.y) {
+		float basket_left = basket.translation.x - basket.scale.x;
+		float basket_right = basket.translation.x + basket.scale.x;
+		if (basket_left < translation.x and translation.x < basket_right) {
+			move_way = true;
+			return true;
+		}
+	}
+		
 
 	//이동하면서 자전하는 값을 키움.
 	float r = start_point.x < 0 ? -5.0f : 5.0f;
 	rotate.z += r;
 	degree_range_normalization(rotate.z);
+	return false;
 }
 
 void Polygons::set_route() {
@@ -245,7 +274,7 @@ GLvoid handleMouseWheel(int wheel, int direction, int x, int y);
 //--------------------------------------------------------
 
 //flag 및 베이스 변수들
-glm::vec3 background_color{ 0.7f, 0.7f, 0.7f };	//--- 배경 색깔
+glm::vec3 background_color{ 0.8f };	//--- 배경 색깔
 bool leftdown{ false };								//--- 마우스 클릭상황 flag
 
 //출력 옵션
@@ -271,6 +300,7 @@ Camera camera;
 
 //오브젝트 클래스 생성
 std::vector<Polygons> object;
+std::vector<Polygons> on_basket;
 
 //--------------------------------------------------------
 //--- 실습용 함수 선언
@@ -290,7 +320,7 @@ void slice_polygon();	//2차 시도
 //--------------------------------------------------------
 //--- 실습용 전역변수 선언
 //-------------------------------------------------------
-Axis obj_axis;	//--- x, y, z 축 출력용.
+//Axis obj_axis;	//--- x, y, z 축 출력용.
 
 //------------------------------------
 //메인 함수 정의
@@ -342,8 +372,13 @@ GLvoid setup() {
 	depthcheck = true;		//은면제거 유무
 	drawstyle = true;	//false : 와이어(line) 객체/ true : 솔리드(triangle) 객체
 
-	//카메라 초기화
-	{
+	{	//Shader 초기화
+		shader.set_color(glm::vec3{ 1.0f });
+		shader.select_color(1);
+	}
+
+	
+	{	//카메라 초기화
 		camera.setPos({ 0.0f, 0.0f, 0.5f });
 		camera.setDir({ 0.0f, 0.0f, 0.0f });
 		camera.setUp({ 0.0f, 1.0f, 0.0f });
@@ -356,15 +391,20 @@ GLvoid setup() {
 
 	}
 
-
-
-	{	//바닥 초기화
-		
+	{	//바구니 초기화
+		basket.reset(MESH_SQUARE);
+		{
+			basket.mesh.vertex.clear();
+			basket.mesh.vertex.push_back({1.0f, 1.0f, 0.0f});
+			basket.mesh.vertex.push_back({-1.0f, 1.0f, 0.0f});
+			basket.mesh.vertex.push_back({-1.0f, -1.0f, 0.0f});
+			basket.mesh.vertex.push_back({1.0f, -1.0f, 0.0f});
+			basket.mesh.push_GPU();
+		}
+		basket.translation = glm::vec3{ 0.0f, -0.8f, 0.0f };
+		basket.scale = glm::vec3{ 0.25f, 0.05f, 1.0f };
 	}
-	
-	{	//Object 초기화
-	
-	}
+
 }
 
 //--- mesh 구조체 출력 함수
@@ -394,6 +434,10 @@ void Draw_shape(const Object& obj)
 //--- 그리기 콜백 함수
 GLvoid drawScene()
 {
+	const int uniform_color{ 0 };
+	const int vertex_color{ 1 };
+
+
 	//--- 변경된 배경색 설정
 	glClearColor(background_color.r, background_color.g, background_color.b, 1.0f);
 	//glClearColor(0.7, 0.7, 0.7, 1.0f);
@@ -420,12 +464,19 @@ GLvoid drawScene()
 
 	//바구니 출력
 	{
-
+		shader.select_color(vertex_color);
+		
+		glBindVertexArray(basket.getVao());
+		shader.worldTransform(basket);
+		basket.mesh.AUTO_Draw();
 	}
 
 	// 마우스 출력
 	{
 		if (leftdown) {
+			shader.select_color(uniform_color);
+			shader.set_color(glm::vec3{ 0.0f });
+
 			glBindVertexArray(mouse.vao);
 
 			// 단위행렬 월드변환
@@ -439,9 +490,13 @@ GLvoid drawScene()
 
 	//--- 오브젝트 출력
 	{				
+		shader.select_color(uniform_color);
+
 		for (Polygons& o : object) {
 			glBindVertexArray(o.getVao());
 			shader.worldTransform(o);
+			shader.set_color(o.color);
+
 			if(debug){	
 				std::cout << "정점 위치" << '\n';
 				DebugPrintVBOContents(o.mesh.vbo[0], o.mesh.vertexnum, sizeof(glm::vec3));
@@ -451,35 +506,30 @@ GLvoid drawScene()
 			//	//o.mesh.AUTO_Draw(drawstyle);
 			//}
 			o.mesh.AUTO_Draw(drawstyle);
-			if (draw_route) {
+
+			if (draw_route) {	// 이동 루트 그리기
 				shader.worldTransform();	//world 변환 초기화
 				glBindVertexArray(o.move_route.vao);
 				int route_num = o.move_route.index.size();
 				int start = static_cast<int>(glm::floor(o.time * route_num));
 				glDrawElements(GL_LINE_STRIP, route_num - start, GL_UNSIGNED_INT, (void*)(start * sizeof(unsigned int)));
 			}
+		
 
 		}
 
-		/*std::cout << "오브젝트 출력 시작--------------------------------" << '\n';
-		for (int i = 0; i < object.size(); i++) {
-			Polygons& o = object[i];
+		// 바구니 위의 오브젝트 출력
+		for (Polygons& o : on_basket) {
 			glBindVertexArray(o.getVao());
 			shader.worldTransform(o);
+			shader.set_color(o.color);
+
 			if (debug) {
 				std::cout << "정점 위치" << '\n';
 				DebugPrintVBOContents(o.mesh.vbo[0], o.mesh.vertexnum, sizeof(glm::vec3));
 			}
-			{
-				std::cout << i << "번째 도형의 vao : " << o.getVao() << ", 정점 갯수 : " << o.mesh.vertex.size() << '\n';
-			}
-
-			for (int j = 0; j < o.mesh.indexnum; j++) {
-				drawstyle? o.mesh.Fill_Draw(i): o.mesh.LINE_Draw(i);
-				o.mesh.AUTO_Draw(drawstyle);
-			}
+			o.mesh.AUTO_Draw(drawstyle);
 		}
-		std::cout << "--------------------------------" << '\n';*/
 	}
 
 	//--- GL 오류시 출력하도록 하는 디버깅코드
@@ -648,6 +698,25 @@ GLvoid Timer(int value) { //--- 콜백 함수: 타이머 콜백 함수
 	static int gen_time{ 0 };
 
 
+	{// 바구니 이동 관련
+		static int move_dir = 1;
+		static float move_speed = 0.02f;
+		float now_move{};
+
+		basket.translation.x += move_dir * move_speed;
+		now_move = move_dir * move_speed;
+
+		if (glm::abs(basket.translation.x) + glm::abs(basket.scale.x) > 1.0f) {
+			move_dir *= -1;
+			basket.translation.x += move_dir * move_speed * 2;
+			now_move += move_dir * move_speed * 2;
+		}
+
+		// 바구니 위의 조각들 움직임.
+		for (Polygons& p : on_basket) {
+			p.translation.x += now_move;
+		}
+	}
 
 	{// 도형 삭제 관련 
 		int index{ 0 };
@@ -672,9 +741,10 @@ GLvoid Timer(int value) { //--- 콜백 함수: 타이머 콜백 함수
 
 	//도형 생성 관련
 	if (gen_time == 59) {
-		object.push_back(Polygons());
-		object.at(object.size() - 1).reset(random_number(MESH_TRIANGLE, MESH_OCTAGON));
+		Polygons tmp;
+		tmp.reset(random_number(MESH_TRIANGLE, MESH_OCTAGON));
 		//object.at(object.size() - 1).reset(MESH_TRIANGLE);
+		object.push_back(std::move(tmp));
 
 		if (debug) {
 			std::cout << "object에 현재 도형 갯수 :" << object.size() << '\n';
@@ -729,8 +799,23 @@ void Change_switch(bool& variable) {
 }
 
 bool move(Polygons& o) {
-	o.move();
-	if (o.time >= 1.0f) {
+	if (o.move()) {
+		on_basket.push_back(std::move(o));		
+
+		int index = -1;
+		for (Polygons& p : object) {
+			++index;
+			if (&p == &o) {
+				break;
+			}
+		}
+
+		if(index < object.size())
+			object.erase(object.begin() + index);
+	}
+
+	//if (o.time >= 1.0f) {
+	if (o.translation.y <= o.end_point.y) {
 		return true;
 	}
 
@@ -787,31 +872,26 @@ void slice_polygon() {
 	int cnt{};
 	int size_o = object.size();
 
+	// 마우스 관련 변수 미리 계산.
+	float m_dx{ 0.0f };
+	float m_m{ 0.0f };
+	if ((m_dx = movex - mousex) != 0.0f) {
+		m_m = (movey - mousey) / (movex - mousex);		// dy / dx
+	}
+	float m_c = mousey - m_m * mousex;					// c(y절편)
+
 	//for (Polygons& p : object) {
 	for (int i = 0; i < size_o; i++) {
 		Polygons& p = object[cnt];
-		if(debug)std::cout << "p.mesh.vertex.size() : " << p.mesh.vertex.size() << '\n';
-
 		//해당 위치의 AAB 판정에서 안쪽인지? - 미리 빼서 계산비용 절약
 		if (!check_inside(p)) {	
 			cnt++;//도형 1개의 잘림판단 완료.
 			continue;
 		}
-		// 이 아래는 일단 충돌 가능성 있음. - 계산비용 사용
-		if(debug)std::cout << "ABB에서 걸러지지 않음 vao: " << p.mesh.vao << '\n';
 
 		// 월드 변환을 가져옴.
 		glm::mat4 matrix{ 1.0f };
-		p.World_Transform(matrix);
-
-
-		// 마우스 관련 변수 미리 계산.
-		float m_dx{0.0f};
-		float m_m{0.0f};
-		if ((m_dx = movex - mousex)!= 0.0f) {
-			m_m= (movey - mousey) / (movex - mousex);		// dy / dx
-		}
-		float m_c = mousey - m_m * mousex;					// c(y절편)
+		p.World_Transform(matrix);		
 
 		// p의 정점위치를 전부 가져옴.
 		std::vector<glm::vec3> p_vertex;
@@ -824,6 +904,7 @@ void slice_polygon() {
 		// 두개의 polygon 정점들을 저장한 vector 변수 생성
 		std::vector<glm::vec3> first;
 		std::vector<glm::vec3> second;
+
 		// first와 second 중에 넣을 polygon 선택 변수
 		bool select_first{ true };	//true 일때 first에 넣음.
 
@@ -879,6 +960,7 @@ void slice_polygon() {
 		}
 
 		if (flag >= 2) {// 새로운 polygon과 현재 polygon의 mesh값 변경			
+			p.is_sliced = true;
 			if(debug) std::cout << "flag : TRUE, vao:" << p.getVao() << '\n';
 
 			glm::vec3 now_translation = p.translation;
@@ -949,22 +1031,23 @@ void slice_polygon() {
 
 				p.set_route();
 			}
+
+			glm::vec3 p_color = p.color;
 			//second 정점들을 적용 - 새로운 polygons를 생성
+			Polygons new_p;
 
-			object.push_back(Polygons());
-			const Polygons& origin_p = object.at(cnt);
-
-			Polygons& new_p = object.at(object.size() - 1);	//막 생성한 polygon을 가르킴.			
+			new_p.color = p_color;
+			new_p.is_sliced = true;
 			{
 				new_p.reset(-1);
 				//새로생긴 polygons의 값을 잘린 도형값으로.
-				new_p.translation = origin_p.translation;
-				new_p.scale = origin_p.scale;
-				new_p.rotate = origin_p.rotate;
-				new_p.start_point = origin_p.start_point;
-				new_p.control_point = origin_p.control_point;
-				new_p.end_point = origin_p.end_point;
-				new_p.time = origin_p.time;
+				new_p.translation = p.translation;
+				new_p.scale = p.scale;
+				new_p.rotate = p.rotate;
+				new_p.start_point = p.start_point;
+				new_p.control_point = p.control_point;
+				new_p.end_point = p.end_point;
+				new_p.time = p.time;
 			}
 			//새로 생길 도형의 중심점을 갱신
 			glm::vec3 center_second{ 0.0f };
@@ -1011,7 +1094,7 @@ void slice_polygon() {
 
 			//TODO 잘린 도형에 새로운 route를 넣어주어야함.
 			{
-				new_p.speed = origin_p.speed;
+				new_p.speed = p.speed;
 				new_p.start_point = center_second;
 				new_p.translation = center_second;
 
@@ -1024,6 +1107,9 @@ void slice_polygon() {
 				new_p.time = 0.0f;
 				new_p.set_route();
 			}
+
+			object.push_back(std::move(new_p));
+
 		}
 
 		cnt++;//도형 1개의 잘림판단 완료.

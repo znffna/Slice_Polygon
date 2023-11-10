@@ -237,6 +237,29 @@ void Object::setPoint(const glm::vec3& point) {
 	own_point = point;
 }
 
+bool Object::Collision(const Object& other) const {
+
+	float other_l = other.translation.x - other.scale.x;
+	float other_r = other.translation.x + other.scale.x;
+	float other_b = other.translation.y - other.scale.y;
+	float other_t = other.translation.y + other.scale.y;
+
+	float this_l = translation.x - scale.x;
+	float this_r = translation.x + scale.x;
+	float this_b = translation.y - scale.y;
+	float this_t = translation.y + scale.y;
+
+	// 왼쪽 끝보다 우측끝이 더 왼쪽.
+	if (other_l > this_r) {	return false; }
+	// 우측 끝보다 좌측끝이 더 우측.
+	if (other_r < this_l) {	return false; }
+	// 마우스의 상단보다 폴리곤 하단이 더 위
+	if (other_b > this_t) {	return false; }
+	// 마우스의 하단보다 폴리곤 상단이 더 아래
+	if (other_t < this_b) {	return false; }
+	return true;
+}
+
 
 void Object::World_Transform(glm::mat4& transformMatrix) const {
 	World_after_Translation(transformMatrix);

@@ -114,18 +114,31 @@ void Shader::use() const {
 
 unsigned int Shader::getUniformLocate(const char* uName) const {
 	GLint uniformLocation = glGetUniformLocation(shaderProgramID, uName);
-	//if (uniformLocation == -1) {
-	//	std::cerr << uName << "- Failed to get uniform variable location!" << std::endl;
-	//}
-	//else {
-	//	std::cout << uName <<"- Uniform variable location: " << uniformLocation << std::endl;
-	//}
+	if (uniformLocation == -1) {
+		std::cerr << uName << "- Failed to get uniform variable location!" << std::endl;
+	}
+	else {
+		//std::cout << uName <<"- Uniform variable location: " << uniformLocation << std::endl;
+	}
 	return uniformLocation;
 	//return glGetUniformLocation(shaderProgramID, uName);
 }
 
-void Shader::setColor(const glm::vec3& vector, const char* uniform) const {
+void Shader::select_color(const int& true_to_vertexcolor) const {
+	setInt(true_to_vertexcolor, "selectVertexColor");
+}
+
+void Shader::set_color(const glm::vec3& vector) const {
+	setVec3(vector, "uniform_color");
+}
+
+
+void Shader::setVec3(const glm::vec3& vector, const char* uniform) const {
 	glUniform3fv(getUniformLocate(uniform), 1, glm::value_ptr(vector));
+}
+
+void Shader::setInt(const int& value, const char* uniform) const {
+	glUniform1i(getUniformLocate(uniform), value);
 }
 
 

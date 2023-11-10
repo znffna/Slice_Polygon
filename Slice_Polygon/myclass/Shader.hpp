@@ -22,7 +22,10 @@ public:
 	void use() const;
 	unsigned int getUniformLocate(const char* ) const;
 
-	void setColor(const glm::vec3&, const char*) const;
+	void select_color(const int& true_to_vertexcolor = 1) const;
+	void set_color(const glm::vec3& vector) const;
+	void setVec3(const glm::vec3& vector, const char* uniform) const;
+	void setInt(const int& value, const char* uniform) const;
 
 	void worldTransform() const;
 	void worldTransform(const Object&);
