@@ -12,7 +12,9 @@ const std::string User_guide[] = {
 "----키보드 명령----",
 "도형의 모드 LINE/FILL : Press 'd'",
 "경로 출력하기 on/off : Press 'r'",
-"날라오는 속도 변경하기: +/- (빨라지기/느려지기)",
+"날라오는 속도 변경하기: Press +/- (빨라지기/느려지기)",
+"바구니 위 비우기 :  Press 's'",
+"화면 내의 도형 초기화 : press 'a'",
 "프로그램 종료: q",
 //"Paste_here",
 "-------------------"
@@ -489,20 +491,7 @@ GLvoid drawScene()
 	}
 
 	//--- 오브젝트 출력
-	{	// 바구니 위의 오브젝트 출력
-		shader.select_color(uniform_color);
-		for (Polygons& o : on_basket) {
-			glBindVertexArray(o.getVao());
-			shader.worldTransform(o);
-			shader.set_color(o.color);
-
-			if (debug) {
-				std::cout << "정점 위치" << '\n';
-				DebugPrintVBOContents(o.mesh.vbo[0], o.mesh.vertexnum, sizeof(glm::vec3));
-			}
-			o.mesh.AUTO_Draw(drawstyle);
-		}			
-
+	{	
 		// 그냥 날라오는 오브젝트 출력
 		shader.select_color(uniform_color);
 		for (Polygons& o : object) {
@@ -531,6 +520,19 @@ GLvoid drawScene()
 
 		}
 
+		// 바구니 위의 오브젝트 출력
+		shader.select_color(uniform_color);
+		for (Polygons& o : on_basket) {
+			glBindVertexArray(o.getVao());
+			shader.worldTransform(o);
+			shader.set_color(o.color);
+
+			if (debug) {
+				std::cout << "정점 위치" << '\n';
+				DebugPrintVBOContents(o.mesh.vbo[0], o.mesh.vertexnum, sizeof(glm::vec3));
+			}
+			o.mesh.AUTO_Draw(drawstyle);
+		}
 	
 	}
 
@@ -560,6 +562,13 @@ GLvoid Reshape(int w, int h)
 GLvoid Keyboard(unsigned char key, int x, int y) {
 	//std::cout << key << "가 눌림" << std::endl;	
 	switch (key) {
+	case 'a': case 'A':
+		object.clear();
+		on_basket.clear();
+		break;
+	case 's': case 'S':
+		on_basket.clear();
+		break;
 	case '+':
 		instance_speed += 0.005f;
 		instance_speed = glm::clamp(instance_speed, 0.002f, 0.2f);
@@ -567,7 +576,7 @@ GLvoid Keyboard(unsigned char key, int x, int y) {
 			p.speed += 0.005f;
 			p.speed = glm::clamp(p.speed, 0.002f, 0.05f);
 		}
-		std::cout << "instance_speed increase=" << instance_speed << '\n';
+		if(debug) std::cout << "instance_speed increase=" << instance_speed << '\n';
 		break;
 	case '-':
 		instance_speed -= 0.005f;
@@ -576,7 +585,7 @@ GLvoid Keyboard(unsigned char key, int x, int y) {
 			p.speed -= 0.005f;
 			p.speed = glm::clamp(p.speed, 0.002f, 0.2f);
 		}
-		std::cout << "instance_speed decrease=" << instance_speed << '\n';
+		if (debug) std::cout << "instance_speed decrease=" << instance_speed << '\n';
 		break;
 	case 'r': case 'R':
 		draw_route = draw_route == false ? true : false;
@@ -600,24 +609,16 @@ GLvoid specialKeyboard(int key, int x, int y) {
 
 	switch (key) {
 	case GLUT_KEY_LEFT:
-		for (Polygons& p : object) {
-			p.addTranslation_x(-0.2f);
-		}
+
 		break;
 	case GLUT_KEY_RIGHT:
-		for (Polygons& p : object) {
-			p.addTranslation_x(0.2f);
-		}
+
 		break;
 	case GLUT_KEY_UP:
-		for (Polygons& p : object) {
-			p.addTranslation_y(0.2f);
-		}
+
 		break;
 	case GLUT_KEY_DOWN:
-		for (Polygons& p : object) {
-			p.addTranslation_y(-0.2f);
-		}
+
 		break;
 	}
 	glutPostRedisplay();
@@ -806,7 +807,8 @@ void Change_switch(bool& variable) {
 
 bool move(Polygons& o) {
 	if (o.move()) {
-		on_basket.push_back(std::move(o));		
+		//on_basket.push_back(std::move(o));		
+		on_basket.insert(on_basket.begin(), std::move(o));		
 
 		int index = -1;
 		for (Polygons& p : object) {
