@@ -489,9 +489,22 @@ GLvoid drawScene()
 	}
 
 	//--- 오브젝트 출력
-	{				
+	{	// 바구니 위의 오브젝트 출력
 		shader.select_color(uniform_color);
+		for (Polygons& o : on_basket) {
+			glBindVertexArray(o.getVao());
+			shader.worldTransform(o);
+			shader.set_color(o.color);
 
+			if (debug) {
+				std::cout << "정점 위치" << '\n';
+				DebugPrintVBOContents(o.mesh.vbo[0], o.mesh.vertexnum, sizeof(glm::vec3));
+			}
+			o.mesh.AUTO_Draw(drawstyle);
+		}			
+
+		// 그냥 날라오는 오브젝트 출력
+		shader.select_color(uniform_color);
 		for (Polygons& o : object) {
 			glBindVertexArray(o.getVao());
 			shader.worldTransform(o);
@@ -518,18 +531,7 @@ GLvoid drawScene()
 
 		}
 
-		// 바구니 위의 오브젝트 출력
-		for (Polygons& o : on_basket) {
-			glBindVertexArray(o.getVao());
-			shader.worldTransform(o);
-			shader.set_color(o.color);
-
-			if (debug) {
-				std::cout << "정점 위치" << '\n';
-				DebugPrintVBOContents(o.mesh.vbo[0], o.mesh.vertexnum, sizeof(glm::vec3));
-			}
-			o.mesh.AUTO_Draw(drawstyle);
-		}
+	
 	}
 
 	//--- GL 오류시 출력하도록 하는 디버깅코드
@@ -647,7 +649,11 @@ GLvoid Mouse(int button, int state, int x, int y) {
 			slice_polygon();
 		}
 
-
+		// debug
+		if (debug) {
+			std::cout << "현재 날라오는 도형 갯수 :" << object.size() << '\n';
+			std::cout << "바가지 위의 도형 갯수 :" << on_basket.size() << '\n';			
+		}
 		leftdown = false;
 	}
 
